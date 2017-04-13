@@ -1259,7 +1259,7 @@ var GridPanel = (function (_super) {
         var totalHeaderHeight = headerHeight * numberOfRowsInHeader;
         var floatingFilterActive = this.gridOptionsWrapper.isFloatingFilter() && !this.columnController.isPivotMode();
         if (floatingFilterActive) {
-            totalHeaderHeight += 20;
+            totalHeaderHeight += this.gridOptionsWrapper.getHeaderHeight();
         }
         this.eHeader.style['height'] = totalHeaderHeight + 'px';
         // padding top covers the header and the floating rows on top
