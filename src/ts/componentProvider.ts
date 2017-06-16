@@ -38,7 +38,7 @@ export interface ComponentConfig {
  * A the agGridComponent interface (ie IHeaderComp). The final object acceptable by ag-grid
  */
 export interface FrameworkComponentWrapper {
-    wrap <A extends IComponent<any>> (frameworkComponent:{new(): any}, methodList:string[]):A
+    wrap <A extends IComponent<any>> (frameworkComponent:{new(): any}, methodList:string[], optionalMethodList?: string[]):A
 }
 
 enum ComponentType {
@@ -90,28 +90,28 @@ export class ComponentProvider {
                 defaultComponent: HeaderGroupComp
             },
             setFloatingFilterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: SetFloatingFilterComp
             },
             textFloatingFilterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: TextFloatingFilterComp
             },
             numberFloatingFilterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: NumberFloatingFilterComp
             },
             dateFloatingFilterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: DateFloatingFilterComp
             },
             readModelAsStringFloatingFilterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: ReadModelAsStringFloatingFilterComp
             },
             floatingFilterWrapperComponent: {
@@ -120,18 +120,18 @@ export class ComponentProvider {
                 defaultComponent: FloatingFilterWrapperComp
             },
             emptyFloatingFilterWrapperComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: EmptyFloatingFilterWrapperComp
             },
             floatingFilterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['onParentModelChanged'],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: null
             },
             filterComponent:{
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['isFilterActive','doesFilterPass','getModel','setModel'],
+                optionalMethodList: ['afterGuiAttached','onNewRowsLoaded','getModelAsString','onFloatingFilterChanged'],
                 defaultComponent: null
             }
         }
@@ -201,7 +201,7 @@ export class ComponentProvider {
 
         //Using framework component
         let FrameworkComponentRaw: {new(): B} = componentToUse.component;
-        return <A>this.frameworkComponentWrapper.wrap(FrameworkComponentRaw, thisComponentConfig.mandatoryMethodList);
+        return <A>this.frameworkComponentWrapper.wrap(FrameworkComponentRaw, thisComponentConfig.mandatoryMethodList, thisComponentConfig.optionalMethodList);
     }
 
     public createAgGridComponent<A extends IComponent<any>> (holder:GridOptions | ColDef | ColGroupDef, componentName:string, defaultComponentName:string, agGridParams:any, mandatory:boolean = true): A{
@@ -220,6 +220,9 @@ export class ComponentProvider {
         let finalParams: any = {};
         _.mergeDeep(finalParams, agGridParams);
         _.mergeDeep(finalParams, customParams);
+        if (!finalParams.api){
+            finalParams.api = this.gridOptions.api;
+        }
         return finalParams;
     }
 

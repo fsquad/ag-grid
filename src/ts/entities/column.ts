@@ -17,6 +17,7 @@ import {ICellRenderer, ICellRendererFunc, ICellRendererComp} from "../rendering/
 import {ICellEditorComp} from "../rendering/cellEditors/iCellEditor";
 import {IFilter} from "../interfaces/iFilter";
 import {IFrameworkFactory} from "../interfaces/iFrameworkFactory";
+import {IEventEmitter} from "../interfaces/iEventEmitter";
 
 // Wrapper around a user provide column definition. The grid treats the column definition as ready only.
 // This class contains all the runtime information about a column, plus some logic (the definition has no logic).
@@ -24,7 +25,7 @@ import {IFrameworkFactory} from "../interfaces/iFrameworkFactory";
 // appear as a child of either the original tree or the displayed tree. However the relevant group classes
 // for each type only implements one, as each group can only appear in it's associated tree (eg OriginalColumnGroup
 // can only appear in OriginalColumn tree).
-export class Column implements ColumnGroupChild, OriginalColumnGroupChild {
+export class Column implements ColumnGroupChild, OriginalColumnGroupChild, IEventEmitter {
 
     // + renderedHeaderCell - for making header cell transparent when moving
     public static EVENT_MOVING_CHANGED = 'movingChanged';
@@ -128,8 +129,8 @@ export class Column implements ColumnGroupChild, OriginalColumnGroupChild {
 
         this.setPinned(this.colDef.pinned);
 
-        var minColWidth = this.gridOptionsWrapper.getMinColWidth();
-        var maxColWidth = this.gridOptionsWrapper.getMaxColWidth();
+        let minColWidth = this.gridOptionsWrapper.getMinColWidth();
+        let maxColWidth = this.gridOptionsWrapper.getMaxColWidth();
 
         if (this.colDef.minWidth) {
             this.minWidth = this.colDef.minWidth;
@@ -145,7 +146,7 @@ export class Column implements ColumnGroupChild, OriginalColumnGroupChild {
 
         this.actualWidth = this.columnUtils.calculateColInitialWidth(this.colDef);
 
-        var suppressDotNotation = this.gridOptionsWrapper.isSuppressFieldDotNotation();
+        let suppressDotNotation = this.gridOptionsWrapper.isSuppressFieldDotNotation();
         this.fieldContainsDots = _.exists(this.colDef.field) && this.colDef.field.indexOf('.')>=0 && !suppressDotNotation;
         this.tooltipFieldContainsDots = _.exists(this.colDef.tooltipField) && this.colDef.tooltipField.indexOf('.')>=0 && !suppressDotNotation;
 
@@ -229,8 +230,8 @@ export class Column implements ColumnGroupChild, OriginalColumnGroupChild {
 
         // if function, then call the function to find out
         if (typeof this.colDef.suppressNavigable === 'function') {
-            var params = this.createIsColumnFuncParams(rowNode);
-            var suppressNaviableFunc = <IsColumnFunc> this.colDef.suppressNavigable;
+            let params = this.createIsColumnFuncParams(rowNode);
+            let suppressNaviableFunc = <IsColumnFunc> this.colDef.suppressNavigable;
             return suppressNaviableFunc(params);
         }
 
@@ -245,8 +246,8 @@ export class Column implements ColumnGroupChild, OriginalColumnGroupChild {
 
         // if function, then call the function to find out
         if (typeof this.colDef.editable === 'function') {
-            var params = this.createIsColumnFuncParams(rowNode);
-            var editableFunc = <IsColumnFunc> this.colDef.editable;
+            let params = this.createIsColumnFuncParams(rowNode);
+            let editableFunc = <IsColumnFunc> this.colDef.editable;
             return editableFunc(params);
         }
 
@@ -394,7 +395,7 @@ export class Column implements ColumnGroupChild, OriginalColumnGroupChild {
     }
 
     public setVisible(visible: boolean): void {
-        var newValue = visible===true;
+        let newValue = visible===true;
         if (this.visible !== newValue) {
             this.visible = newValue;
             this.eventService.dispatchEvent(Column.EVENT_VISIBLE_CHANGED);

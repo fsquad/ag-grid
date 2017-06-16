@@ -1,18 +1,29 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { RowNode } from "../../entities/rowNode";
-import { IInMemoryRowModel } from "../../interfaces/iInMemoryRowModel";
 export interface RefreshModelParams {
     step: number;
     groupState?: any;
     keepRenderedRows?: boolean;
     animate?: boolean;
     keepEditingRows?: boolean;
-    newRowNodes?: RowNode[];
+    rowNodeTransaction?: RowNodeTransaction;
     newData?: boolean;
 }
-export declare class InMemoryRowModel implements IInMemoryRowModel {
+export interface RowDataTransaction {
+    addIndex?: number;
+    add?: any[];
+    remove?: any[];
+    update?: any[];
+}
+export interface RowNodeTransaction {
+    addIndex: number;
+    add: RowNode[];
+    remove: RowNode[];
+    update: RowNode[];
+}
+export declare class InMemoryRowModel {
     private gridOptionsWrapper;
     private columnController;
     private filterManager;
@@ -64,12 +75,17 @@ export declare class InMemoryRowModel implements IInMemoryRowModel {
     doAggregate(): void;
     expandOrCollapseAll(expand: boolean): void;
     private doSort();
-    private doRowGrouping(groupState, newRowNodes);
+    private doRowGrouping(groupState, rowNodeTransaction);
     private restoreGroupState(groupState);
     private doFilter();
     private doPivot();
     private getGroupState();
-    setRowData(rowData: any[], refresh: boolean, firstId?: number): void;
+    getCopyOfNodesMap(): {
+        [id: string]: RowNode;
+    };
+    getRowNode(id: string): RowNode;
+    setRowData(rowData: any[], refresh: boolean): void;
+    updateRowData(rowDataTran: RowDataTransaction): void;
     private doRowsToDisplay();
     insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void;
     onRowHeightChanged(): void;

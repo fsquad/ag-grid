@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -100,7 +100,7 @@ var HeaderGroupWrapperComp = (function (_super) {
             return;
         }
         if (eHeaderGroup) {
-            var dragSource = {
+            var dragSource_1 = {
                 type: dragAndDropService_1.DragSourceType.HeaderCell,
                 eElement: eHeaderGroup,
                 dragItemName: displayName,
@@ -108,8 +108,8 @@ var HeaderGroupWrapperComp = (function (_super) {
                 dragItem: this.getAllColumnsInThisGroup(),
                 dragSourceDropTarget: this.dragSourceDropTarget
             };
-            this.dragAndDropService.addDragSource(dragSource, true);
-            this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource); });
+            this.dragAndDropService.addDragSource(dragSource_1, true);
+            this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource_1); });
         }
     };
     // when moving the columns, we want to move all the columns in this group in one go, and in the order they

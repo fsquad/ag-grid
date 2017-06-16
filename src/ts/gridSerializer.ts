@@ -3,7 +3,6 @@ import {Autowired, Bean} from "./context/context";
 import {ColumnController} from "./columnController/columnController";
 import {Constants} from "./constants";
 import {IRowModel} from "./interfaces/iRowModel";
-import {IInMemoryRowModel} from "./interfaces/iInMemoryRowModel";
 import {FloatingRowModel} from "./rowModels/floatingRowModel";
 import {Utils as _} from "./utils";
 import {RowNode} from "./entities/rowNode";
@@ -23,6 +22,7 @@ import {GroupInstanceIdCreator} from "./columnController/groupInstanceIdCreator"
 import {ColumnGroupChild} from "./entities/columnGroupChild";
 import {ColumnGroup} from "./entities/columnGroup";
 import {GridApi} from "./gridApi";
+import {InMemoryRowModel} from "./rowModels/inMemory/inMemoryRowModel";
 
 /**
  * This interface works in conjuction with the GridSerializer. When serializing a grid, an instance that implements this interface
@@ -221,7 +221,7 @@ export class GridSerializer {
             return '';
         }
 
-        let inMemoryRowModel = <IInMemoryRowModel> this.rowModel;
+        let inMemoryRowModel = <InMemoryRowModel> this.rowModel;
 
         let columnsToExport: Column[];
         if (_.existsAndNotEmpty(columnKeys)) {
@@ -243,28 +243,21 @@ export class GridSerializer {
         }
 
         // first pass, put in the header names of the cols
-        if (!skipHeader || columnGroups) {
+        if (columnGroups) {
             let groupInstanceIdCreator: GroupInstanceIdCreator = new GroupInstanceIdCreator();
-            let displayedGroups: ColumnGroupChild[] = this.displayedGroupCreator.createDisplayedGroups (
+            let displayedGroups: ColumnGroupChild[] = this.displayedGroupCreator.createDisplayedGroups(
                 columnsToExport,
                 this.columnController.getGridBalancedTree(),
                 groupInstanceIdCreator
             );
-            if (columnGroups && displayedGroups.length > 0 && displayedGroups[0] instanceof ColumnGroup) {
-                let gridRowIterator : RowSpanningAccumulator = gridSerializingSession.onNewHeaderGroupingRow();
-                let columnIndex :number = 0;
-                displayedGroups.forEach((it:ColumnGroupChild)=>{
-                    let casted:ColumnGroup = it as ColumnGroup;
-                    gridRowIterator.onColumn(casted.getDefinition().headerName, columnIndex ++, casted.getChildren().length - 1);
-                });
-            }
+            this.recursivelyAddHeaderGroups(displayedGroups, gridSerializingSession);
+        }
 
-            if (!skipHeader){
-                let gridRowIterator = gridSerializingSession.onNewHeaderRow();
-                columnsToExport.forEach((column, index)=>{
-                    gridRowIterator.onColumn (column, index, null)
-                });
-            }
+        if (!skipHeader){
+            let gridRowIterator = gridSerializingSession.onNewHeaderRow();
+            columnsToExport.forEach((column, index)=>{
+                gridRowIterator.onColumn (column, index, null)
+            });
         }
 
         this.floatingRowModel.forEachFloatingTopRow(processRow);
@@ -341,6 +334,33 @@ export class GridSerializer {
         return gridSerializingSession.parse();
     }
 
+    recursivelyAddHeaderGroups<T> (displayedGroups:ColumnGroupChild[], gridSerializingSession:GridSerializingSession<T>):void{
+        let directChildrenHeaderGroups:ColumnGroupChild[];
+        displayedGroups.forEach((columnGroupChild: ColumnGroupChild) => {
+            let columnGroup: ColumnGroup = columnGroupChild as ColumnGroup;
+            if (!columnGroup.getChildren) return;
+            directChildrenHeaderGroups = columnGroup.getChildren();
+        });
+
+        if (displayedGroups.length > 0 && displayedGroups[0] instanceof ColumnGroup) {
+            this.doAddHeaderHeader(gridSerializingSession, displayedGroups);
+        }
+
+        if (directChildrenHeaderGroups){
+            this.recursivelyAddHeaderGroups(directChildrenHeaderGroups, gridSerializingSession);
+        }
+    }
+
+    private doAddHeaderHeader<T>(gridSerializingSession: GridSerializingSession<T>, displayedGroups: ColumnGroupChild[]) {
+        let gridRowIterator: RowSpanningAccumulator = gridSerializingSession.onNewHeaderGroupingRow();
+        let columnIndex: number = 0;
+        displayedGroups.forEach((columnGroupChild: ColumnGroupChild) => {
+            let columnGroup: ColumnGroup = columnGroupChild as ColumnGroup;
+            let colDef = columnGroup.getDefinition();
+
+            gridRowIterator.onColumn(colDef != null ? colDef.headerName : '', columnIndex++, columnGroup.getLeafColumns().length - 1);
+        });
+    }
 }
 
 export enum RowType {

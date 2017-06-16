@@ -1,12 +1,12 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { Column } from "../entities/column";
 import { RowNode } from "../entities/rowNode";
-import { RenderedRow } from "./renderedRow";
+import { RowComp } from "./rowComp";
 import { GridCell } from "../entities/gridCell";
 import { Component } from "../widgets/component";
-export declare class RenderedCell extends Component {
+export declare class CellComp extends Component {
     private context;
     private columnApi;
     private gridApi;
@@ -31,11 +31,13 @@ export declare class RenderedCell extends Component {
     private stylingService;
     private columnHoverService;
     private static PRINTABLE_CHARACTERS;
+    static DOM_DATA_KEY_CELL_COMP: string;
     private eGridCell;
     private eSpanWithValue;
     private eCellWrapper;
     private eParentOfValue;
     private gridCell;
+    private rangeCount;
     private eParentRow;
     private column;
     private node;
@@ -51,9 +53,10 @@ export declare class RenderedCell extends Component {
     private renderedRow;
     private firstRightPinned;
     private lastLeftPinned;
-    constructor(column: Column, node: RowNode, scope: any, renderedRow: RenderedRow);
+    constructor(column: Column, node: RowNode, scope: any, renderedRow: RowComp);
     private createGridCell();
-    private setupGridCell();
+    private addIndexChangeListener();
+    private onRowIndexChanged();
     getGridCell(): GridCell;
     setFocusInOnEditor(): void;
     setFocusOutOnEditor(): void;
@@ -66,6 +69,7 @@ export declare class RenderedCell extends Component {
     private getValue();
     private getDataForRow();
     private addRangeSelectedListener();
+    private onRangeSelectionChanged();
     private addHighlightListener();
     private addChangeListener();
     private animateCellWithDataChanged();
@@ -101,7 +105,7 @@ export declare class RenderedCell extends Component {
     stopEditing(cancel?: boolean): void;
     private createParams();
     private createEvent(event);
-    getRenderedRow(): RenderedRow;
+    getRenderedRow(): RowComp;
     isSuppressNavigable(): boolean;
     isCellEditable(): boolean;
     onMouseEvent(eventName: string, mouseEvent: MouseEvent): void;

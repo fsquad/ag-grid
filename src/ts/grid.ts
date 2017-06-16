@@ -54,14 +54,12 @@ import {StylingService} from "./styling/stylingService";
 import {ColumnHoverService} from "./rendering/columnHoverService";
 import {ColumnAnimationService} from "./rendering/columnAnimationService";
 import {ComponentProvider} from "./componentProvider";
-import {
-    ServerPaginationService
-} from "./rowModels/pagination/serverPaginationService";
 import {SortService} from "./rowNodes/sortService";
 import {FilterService} from "./rowNodes/filterService";
 import {RowNodeFactory} from "./rowNodes/rowNodeFactory";
 import {AutoGroupColService} from "./columnController/autoGroupColService";
 import {PaginationAutoPageSizeService, PaginationProxy} from "./rowModels/paginationProxy";
+import {ImmutableService} from "./rowModels/inMemory/immutableService";
 
 
 export interface GridParams {
@@ -90,9 +88,7 @@ export class Grid {
     // the default is InMemoryRowModel, which is also used for pagination.
     // the enterprise adds viewport to this list.
     private static RowModelClasses: any = {
-        virtual: InfiniteRowModel, // deprecated
         infinite: InfiniteRowModel,
-        pagination: InMemoryRowModel,
         normal: InMemoryRowModel
     };
 
@@ -116,11 +112,11 @@ export class Grid {
             console.error('ag-Grid: no gridOptions provided to the grid');
         }
         
-        var rowModelClass = this.getRowModelClass(gridOptions);
+        let rowModelClass = this.getRowModelClass(gridOptions);
 
-        var enterprise = _.exists(Grid.enterpriseBeans);
+        let enterprise = _.exists(Grid.enterpriseBeans);
 
-        var frameworkFactory = params ? params.frameworkFactory : null;
+        let frameworkFactory = params ? params.frameworkFactory : null;
         if (_.missing(frameworkFactory)) {
             frameworkFactory = new BaseFrameworkFactory();
         }
@@ -160,17 +156,18 @@ export class Grid {
                 DragAndDropService, SortController, ColumnApi, FocusedCellController, MouseEventService,
                 CellNavigationService, FilterStage, SortStage, FlattenStage, FocusService, FilterService, RowNodeFactory,
                 CellEditorFactory, CellRendererService, ValueFormatterService, StylingService, ScrollVisibleService,
-                ColumnHoverService, ColumnAnimationService, ServerPaginationService, SortService, AutoGroupColService],
+                ColumnHoverService, ColumnAnimationService, SortService, AutoGroupColService, ImmutableService],
             components: [
                 {componentName: 'AgCheckbox', theClass: AgCheckbox}
             ],
             debug: !!gridOptions.debug
         };
 
-        this.context = new Context(contextParams, new Logger('Context', contextParams.debug));
+        let isLoggingFunc = ()=> contextParams.debug;
+        this.context = new Context(contextParams, new Logger('Context', isLoggingFunc));
 
-        var eventService = this.context.getBean('eventService');
-        var readyEvent = {
+        let eventService = this.context.getBean('eventService');
+        let readyEvent = {
             api: gridOptions.api,
             columnApi: gridOptions.columnApi
         };
@@ -182,14 +179,17 @@ export class Grid {
     }
 
     private getRowModelClass(gridOptions: GridOptions): any {
-        var rowModelType = gridOptions.rowModelType;
+        let rowModelType = gridOptions.rowModelType;
         if (_.exists(rowModelType)) {
-            var rowModelClass = Grid.RowModelClasses[rowModelType];
+            let rowModelClass = Grid.RowModelClasses[rowModelType];
             if (_.exists(rowModelClass)) {
                 return rowModelClass;
             } else {
                 console.error('ag-Grid: count not find matching row model for rowModelType ' + rowModelType);
                 if (rowModelType==='viewport') {
+                    console.error('ag-Grid: rowModelType viewport is only available in ag-Grid Enterprise');
+                }
+                if (rowModelType==='enterprise') {
                     console.error('ag-Grid: rowModelType viewport is only available in ag-Grid Enterprise');
                 }
             }

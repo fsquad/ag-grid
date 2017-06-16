@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { BorderLayout } from "../layout/borderLayout";
@@ -77,11 +77,11 @@ export declare class GridPanel extends BeanStub {
     private eAllCellContainers;
     private lastLeftPosition;
     private lastTopPosition;
-    private animationThreadCount;
     private bodyHeight;
     private useScrollLag;
     private enableRtl;
     private forPrint;
+    private autoHeight;
     private scrollWidth;
     private pinningRight;
     private pinningLeft;

@@ -128,7 +128,7 @@
   stroke: none;
   fill: #000;
 }
-.ag-bootstrap .ag-no-scrolls .ag-header-container {
+.ag-bootstrap .ag-layout-for-print .ag-header-container {
   background: none;
   border-bottom: none;
 }
@@ -208,6 +208,12 @@
 }
 .ag-bootstrap .ag-row-selected {
   background-color: #b0e0e6;
+}
+.ag-bootstrap .ag-row-stub {
+  background-color: #f0f0f0;
+}
+.ag-bootstrap .ag-stub-cell {
+  padding: 2px 2px 2px 10px;
 }
 .ag-bootstrap .ag-floating-top .ag-row {
   background-color: #f0f0f0;

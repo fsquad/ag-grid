@@ -1,10 +1,11 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { RowNode } from "../../entities/rowNode";
 import { IRowModel } from "../../interfaces/iRowModel";
 import { IDatasource } from "../iDatasource";
 import { BeanStub } from "../../context/beanStub";
+import { RowDataTransaction } from "../inMemory/inMemoryRowModel";
 export declare class InfiniteRowModel extends BeanStub implements IRowModel {
     private gridOptionsWrapper;
     private filterManager;
@@ -13,7 +14,9 @@ export declare class InfiniteRowModel extends BeanStub implements IRowModel {
     private eventService;
     private context;
     private infiniteCache;
+    private rowNodeBlockLoader;
     private datasource;
+    private rowHeight;
     getRowBounds(index: number): {
         rowTop: number;
         rowHeight: number;
@@ -31,6 +34,8 @@ export declare class InfiniteRowModel extends BeanStub implements IRowModel {
     isRowsToRender(): boolean;
     private reset();
     private resetCache();
+    private destroyCache();
+    private onCacheUpdated();
     getRow(rowIndex: number): RowNode;
     forEachNode(callback: (rowNode: RowNode, index: number) => void): void;
     getCurrentPageHeight(): number;
@@ -38,14 +43,12 @@ export declare class InfiniteRowModel extends BeanStub implements IRowModel {
     getPageFirstRow(): number;
     getPageLastRow(): number;
     getRowCount(): number;
-    insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void;
-    removeItems(rowNodes: RowNode[], skipRefresh: boolean): void;
-    addItems(items: any[], skipRefresh: boolean): void;
+    updateRowData(transaction: RowDataTransaction): void;
     isRowPresent(rowNode: RowNode): boolean;
     refreshCache(): void;
     purgeCache(): void;
     getVirtualRowCount(): number;
     isMaxRowFound(): boolean;
     setVirtualRowCount(rowCount: number, maxRowFound?: boolean): void;
-    getPageState(): any;
+    getBlockState(): any;
 }

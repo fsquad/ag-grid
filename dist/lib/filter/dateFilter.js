@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -92,7 +92,7 @@ var DateFilter = (function (_super) {
         return {
             dateTo: utils_1.Utils.serializeDateToYyyyMmDd(this.dateToComponent.getDate(), "-"),
             dateFrom: utils_1.Utils.serializeDateToYyyyMmDd(this.dateFromComponent.getDate(), "-"),
-            type: this.filter,
+            type: this.filter ? this.filter : this.defaultFilter,
             filterType: 'date'
         };
     };

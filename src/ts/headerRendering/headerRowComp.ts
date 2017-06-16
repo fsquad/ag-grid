@@ -52,20 +52,20 @@ export class HeaderRowComp extends Component {
 
     public forEachHeaderElement(callback: (comp: IComponent<any>)=>void): void {
         Object.keys(this.headerElements).forEach( key => {
-            var headerElement = this.headerElements[key];
+            let headerElement = this.headerElements[key];
             callback(headerElement);
         });
     }
 
     public destroy(): void {
-        var idsOfAllChildren = Object.keys(this.headerElements);
+        let idsOfAllChildren = Object.keys(this.headerElements);
         this.removeAndDestroyChildComponents(idsOfAllChildren);
         super.destroy();
     }
 
     private removeAndDestroyChildComponents(idsToDestroy: string[]): void {
         idsToDestroy.forEach( id => {
-            var child = this.headerElements[id];
+            let child = this.headerElements[id];
             this.getGui().removeChild(child.getGui());
             if (child.destroy){
                 child.destroy();
@@ -75,9 +75,36 @@ export class HeaderRowComp extends Component {
     }
 
     private onRowHeightChanged(): void {
-        var rowHeight = this.gridOptionsWrapper.getHeaderHeight();
-        this.getGui().style.top = (this.dept * rowHeight) + 'px';
-        this.getGui().style.height = rowHeight + 'px';
+        let headerRowCount = this.columnController.getHeaderRowCount();
+        let sizes:number[]=[];
+
+        let numberOfFloating = 0;
+        let groupHeight:number;
+        let headerHeight:number;
+        if (!this.columnController.isPivotMode()){
+            if (this.gridOptionsWrapper.isFloatingFilter()){
+                headerRowCount ++;
+            }
+            numberOfFloating = (this.gridOptionsWrapper.isFloatingFilter()) ? 1 : 0;
+            groupHeight = this.gridOptionsWrapper.getGroupHeaderHeight();
+            headerHeight = this.gridOptionsWrapper.getHeaderHeight();
+        }else{
+            numberOfFloating = 0;
+            groupHeight = this.gridOptionsWrapper.getPivotGroupHeaderHeight();
+            headerHeight = this.gridOptionsWrapper.getPivotHeaderHeight();
+        }
+        let numberOfNonGroups = 1 + numberOfFloating;
+        let numberOfGroups = headerRowCount - numberOfNonGroups;
+
+        for (let i=0; i<numberOfGroups; i++) sizes.push(groupHeight);
+        sizes.push(headerHeight);
+        for (let i=0; i<numberOfFloating; i++) sizes.push(this.gridOptionsWrapper.getFloatingFiltersHeight());
+
+        let rowHeight = 0;
+        for (let i=0; i<this.dept; i++) rowHeight+=sizes[i];
+
+        this.getGui().style.top = rowHeight + 'px';
+        this.getGui().style.height = sizes[this.dept] + 'px';
     }
 
     //noinspection JSUnusedLocalSymbols
@@ -89,6 +116,13 @@ export class HeaderRowComp extends Component {
         this.setWidth();
 
         this.addDestroyableEventListener(this.gridOptionsWrapper, GridOptionsWrapper.PROP_HEADER_HEIGHT, this.onRowHeightChanged.bind(this) );
+        this.addDestroyableEventListener(this.gridOptionsWrapper, GridOptionsWrapper.PROP_PIVOT_HEADER_HEIGHT, this.onRowHeightChanged.bind(this) );
+
+        this.addDestroyableEventListener(this.gridOptionsWrapper, GridOptionsWrapper.PROP_GROUP_HEADER_HEIGHT, this.onRowHeightChanged.bind(this) );
+        this.addDestroyableEventListener(this.gridOptionsWrapper, GridOptionsWrapper.PROP_PIVOT_GROUP_HEADER_HEIGHT, this.onRowHeightChanged.bind(this) );
+
+        this.addDestroyableEventListener(this.gridOptionsWrapper, GridOptionsWrapper.PROP_FLOATING_FILTERS_HEIGHT, this.onRowHeightChanged.bind(this) );
+
         this.addDestroyableEventListener(this.eventService, Events.EVENT_VIRTUAL_COLUMNS_CHANGED, this.onVirtualColumnsChanged.bind(this) );
         this.addDestroyableEventListener(this.eventService, Events.EVENT_DISPLAYED_COLUMNS_CHANGED, this.onDisplayedColumnsChanged.bind(this) );
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_RESIZED, this.onColumnResized.bind(this) );
@@ -100,7 +134,7 @@ export class HeaderRowComp extends Component {
     }
 
     private setWidth(): void {
-        var mainRowWidth = this.columnController.getContainerWidth(this.pinned) + 'px';
+        let mainRowWidth = this.columnController.getContainerWidth(this.pinned) + 'px';
         this.getGui().style.width = mainRowWidth;
     }
 
@@ -109,7 +143,7 @@ export class HeaderRowComp extends Component {
     }
 
     private removeAndDestroyAllChildComponents(): void {
-        var idsOfAllChildren = Object.keys(this.headerElements);
+        let idsOfAllChildren = Object.keys(this.headerElements);
         this.removeAndDestroyChildComponents(idsOfAllChildren);
     }
 
@@ -120,9 +154,9 @@ export class HeaderRowComp extends Component {
     
     private onVirtualColumnsChanged(): void {
 
-        var currentChildIds = Object.keys(this.headerElements);
+        let currentChildIds = Object.keys(this.headerElements);
 
-        var itemsAtDepth = this.columnController.getVirtualHeaderGroupRow(
+        let itemsAtDepth = this.columnController.getVirtualHeaderGroupRow(
             this.pinned,
             this.type == HeaderRowType.FLOATING_FILTER ?
                 this.dept -1 :
@@ -130,7 +164,7 @@ export class HeaderRowComp extends Component {
         );
 
         itemsAtDepth.forEach( (child: ColumnGroupChild) => {
-            var idOfChild = child.getUniqueId();
+            let idOfChild = child.getUniqueId();
 
             // if we already have this cell rendered, do nothing
             if (currentChildIds.indexOf(idOfChild) >= 0) {
@@ -146,7 +180,7 @@ export class HeaderRowComp extends Component {
                 return;
             }
 
-            var renderedHeaderElement = this.createHeaderElement(child);
+            let renderedHeaderElement = this.createHeaderElement(child);
             this.headerElements[idOfChild] = renderedHeaderElement;
             this.getGui().appendChild(renderedHeaderElement.getGui());
         });
@@ -172,19 +206,13 @@ export class HeaderRowComp extends Component {
     }
 
     private createHeaderElement(columnGroupChild:ColumnGroupChild): IComponent<any> {
-        var result: IComponent<any>;
+        let result: IComponent<any>;
 
         switch (this.type) {
             case HeaderRowType.COLUMN :
                 if (this.isUsingOldHeaderRenderer(<Column> columnGroupChild)) {
-                    ////// DEPRECATED - TAKE THIS OUT IN V9
-                    if (!warningGiven) {
-                        console.warn('ag-Grid: since v8, custom headers are now done using components. Please refer to the documentation https://www.ag-grid.com/javascript-grid-header-rendering/. Support for the old way will be dropped in v9.');
-                        warningGiven = true;
-                    }
                     result = new RenderedHeaderCell(<Column> columnGroupChild, this.eRoot, this.dropTarget, this.pinned);
                 } else {
-                    // the future!!!
                     result = new HeaderWrapperComp(<Column> columnGroupChild, this.eRoot, this.dropTarget, this.pinned);
                 }
                 break;
@@ -235,13 +263,13 @@ export class HeaderRowComp extends Component {
                     filterComponent.getNullableModel() :
                     filterComponent.getModel();
             },
-            onFloatingFilterChanged: (change: F|M): void => {
+            onFloatingFilterChanged: (change: F|M): boolean => {
                 let filterComponent: BaseFilter<any, any, M> = <any>this.filterManager.getFilterComponent(column);
                 if (filterComponent.onFloatingFilterChanged){
                     //If going through this branch of code the user MUST
                     //be passing an object of type change that contains
                     //a model propery inside and some other stuff
-                    filterComponent.onFloatingFilterChanged(<F>change);
+                    return filterComponent.onFloatingFilterChanged(<F>change);
                 } else {
                     //If going through this branch of code the user MUST
                     //be passing the plain model and delegating to ag-Grid
@@ -249,6 +277,7 @@ export class HeaderRowComp extends Component {
                     //the filters
                     filterComponent.setModel(<M>change);
                     this.filterManager.onFilterChanged();
+                    return true;
                 }
             },
             //This one might be overriden from the colDef
@@ -258,6 +287,3 @@ export class HeaderRowComp extends Component {
     }
 
 }
-
-// remove this in v9, when we take out support for the old headers
-let warningGiven = false;

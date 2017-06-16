@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { IDateComp, IDateParams } from "./rendering/dateComponent";
@@ -24,7 +24,7 @@ export interface ComponentConfig {
 export interface FrameworkComponentWrapper {
     wrap<A extends IComponent<any>>(frameworkComponent: {
         new (): any;
-    }, methodList: string[]): A;
+    }, methodList: string[], optionalMethodList?: string[]): A;
 }
 export declare class ComponentProvider {
     private gridOptions;

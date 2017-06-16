@@ -20,13 +20,6 @@ export interface IRowModel {
     /** Returns row top and bottom for a given row */
     getRowBounds(index: number): {rowTop: number, rowHeight: number};
 
-    /** Add an item at the specified location */
-    insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void;
-    /** Remove an item from the specified location */
-    removeItems(rowNodes: RowNode[], skipRefresh: boolean): void;
-    /** Add an item at the end */
-    addItems(items: any[], skipRefresh: boolean): void;
-
     /** Returns true if this model has no rows, regardless of model filter. EG if rows present, but filtered
      * out, this still returns false. If it returns true, then the grid shows the 'no rows' overlay - but we
      * don't show that overlay if the rows are just filtered out. */
@@ -43,8 +36,9 @@ export interface IRowModel {
      * their own implementation of the models in the future. */
     getType(): string;
     /**
-     * It tells us if this row model knows about the last row that it can produce. ie InMemoryRowModel = true
-     * InfiniteRowModel=false
+     * It tells us if this row model knows about the last row that it can produce. This is used by the
+     * PaginationPanel, if last row is not found, then the 'last' button is disabled and the last page is
+     * not shown. This is always true for InMemoryRowModel. It toggles for InfiniteRowModel.
      */
     isLastRowFound(): boolean;
 }

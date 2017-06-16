@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -189,8 +189,8 @@ var DragService = (function () {
         }
         // if mouse was left up before we started to move, then this is a tap.
         // we check this before onUpCommon as onUpCommon resets the dragging
-        // var tap = !this.dragging;
-        // var tapTarget = this.currentDragParams.eElement;
+        // let tap = !this.dragging;
+        // let tapTarget = this.currentDragParams.eElement;
         this.onUpCommon(touch);
         // if tap, tell user
         // console.log(`${Math.random()} tap = ${tap}`);

@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -150,23 +150,16 @@ var GridSerializer = (function () {
             gridSerializingSession.addCustomHeader(params.customHeader);
         }
         // first pass, put in the header names of the cols
-        if (!skipHeader || columnGroups) {
+        if (columnGroups) {
             var groupInstanceIdCreator = new groupInstanceIdCreator_1.GroupInstanceIdCreator();
             var displayedGroups = this.displayedGroupCreator.createDisplayedGroups(columnsToExport, this.columnController.getGridBalancedTree(), groupInstanceIdCreator);
-            if (columnGroups && displayedGroups.length > 0 && displayedGroups[0] instanceof columnGroup_1.ColumnGroup) {
-                var gridRowIterator_1 = gridSerializingSession.onNewHeaderGroupingRow();
-                var columnIndex_1 = 0;
-                displayedGroups.forEach(function (it) {
-                    var casted = it;
-                    gridRowIterator_1.onColumn(casted.getDefinition().headerName, columnIndex_1++, casted.getChildren().length - 1);
-                });
-            }
-            if (!skipHeader) {
-                var gridRowIterator_2 = gridSerializingSession.onNewHeaderRow();
-                columnsToExport.forEach(function (column, index) {
-                    gridRowIterator_2.onColumn(column, index, null);
-                });
-            }
+            this.recursivelyAddHeaderGroups(displayedGroups, gridSerializingSession);
+        }
+        if (!skipHeader) {
+            var gridRowIterator_1 = gridSerializingSession.onNewHeaderRow();
+            columnsToExport.forEach(function (column, index) {
+                gridRowIterator_1.onColumn(column, index, null);
+            });
         }
         this.floatingRowModel.forEachFloatingTopRow(processRow);
         if (isPivotMode) {
@@ -230,6 +223,30 @@ var GridSerializer = (function () {
             });
         }
         return gridSerializingSession.parse();
+    };
+    GridSerializer.prototype.recursivelyAddHeaderGroups = function (displayedGroups, gridSerializingSession) {
+        var directChildrenHeaderGroups;
+        displayedGroups.forEach(function (columnGroupChild) {
+            var columnGroup = columnGroupChild;
+            if (!columnGroup.getChildren)
+                return;
+            directChildrenHeaderGroups = columnGroup.getChildren();
+        });
+        if (displayedGroups.length > 0 && displayedGroups[0] instanceof columnGroup_1.ColumnGroup) {
+            this.doAddHeaderHeader(gridSerializingSession, displayedGroups);
+        }
+        if (directChildrenHeaderGroups) {
+            this.recursivelyAddHeaderGroups(directChildrenHeaderGroups, gridSerializingSession);
+        }
+    };
+    GridSerializer.prototype.doAddHeaderHeader = function (gridSerializingSession, displayedGroups) {
+        var gridRowIterator = gridSerializingSession.onNewHeaderGroupingRow();
+        var columnIndex = 0;
+        displayedGroups.forEach(function (columnGroupChild) {
+            var columnGroup = columnGroupChild;
+            var colDef = columnGroup.getDefinition();
+            gridRowIterator.onColumn(colDef != null ? colDef.headerName : '', columnIndex++, columnGroup.getLeafColumns().length - 1);
+        });
     };
     return GridSerializer;
 }());

@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -127,6 +127,9 @@ var ComponentUtil = (function () {
         if (changes.pivotMode) {
             columnApi.setPivotMode(ComponentUtil.toBoolean(changes.pivotMode.currentValue));
         }
+        if (changes.groupRemoveSingleChildren) {
+            api.setGroupRemoveSingleChildren(ComponentUtil.toBoolean(changes.groupRemoveSingleChildren.currentValue));
+        }
         api.dispatchEvent(events_1.Events.EVENT_COMPONENT_STATE_CHANGED, changes);
     };
     ComponentUtil.toBoolean = function (value) {
@@ -160,7 +163,7 @@ ComponentUtil.EVENTS = [];
 ComponentUtil.STRING_PROPERTIES = [
     'sortingOrder', 'rowClass', 'rowSelection', 'overlayLoadingTemplate',
     'overlayNoRowsTemplate', 'headerCellTemplate', 'quickFilterText', 'rowModelType',
-    'editType'
+    'editType', 'domLayout'
 ];
 ComponentUtil.OBJECT_PROPERTIES = [
     'rowStyle', 'context', 'groupColumnDef', 'localeText', 'icons', 'datasource', 'enterpriseDatasource', 'viewportDatasource',
@@ -171,10 +174,11 @@ ComponentUtil.ARRAY_PROPERTIES = [
     'slaveGrids', 'rowData', 'floatingTopRowData', 'floatingBottomRowData', 'columnDefs', 'excelStyles'
 ];
 ComponentUtil.NUMBER_PROPERTIES = [
-    'rowHeight', 'rowBuffer', 'colWidth', 'headerHeight', 'groupDefaultExpanded',
+    'rowHeight', 'rowBuffer', 'colWidth', 'headerHeight', 'groupHeaderHeight', 'floatingFiltersHeight',
+    'pivotHeaderHeight', 'pivotGroupHeaderHeight', 'groupDefaultExpanded',
     'minColWidth', 'maxColWidth', 'viewportRowModelPageSize', 'viewportRowModelBufferSize',
-    'layoutInterval', 'autoSizePadding', 'maxPagesInCache', 'maxConcurrentDatasourceRequests',
-    'paginationOverflowSize', 'paginationPageSize', 'infiniteBlockSize', 'infiniteInitialRowCount',
+    'layoutInterval', 'autoSizePadding', 'maxBlocksInCache', 'maxConcurrentDatasourceRequests',
+    'cacheOverflowSize', 'paginationPageSize', 'infiniteBlockSize', 'infiniteInitialRowCount',
     'scrollbarWidth', 'paginationStartPage', 'infiniteBlockSize'
 ];
 ComponentUtil.BOOLEAN_PROPERTIES = [
@@ -188,16 +192,17 @@ ComponentUtil.BOOLEAN_PROPERTIES = [
     'singleClickEdit', 'suppressLoadingOverlay', 'suppressNoRowsOverlay', 'suppressAutoSize',
     'suppressParentsInRowNodes', 'showToolPanel', 'suppressColumnMoveAnimation', 'suppressMovableColumns',
     'suppressFieldDotNotation', 'enableRangeSelection', 'suppressEnterprise', 'rowGroupPanelShow',
-    'pivotPanelShow', 'suppressTouch', 'allowContextMenuWithControlKey',
+    'pivotPanelShow', 'suppressTouch', 'suppressAsyncEvents', 'allowContextMenuWithControlKey',
     'suppressContextMenu', 'suppressMenuFilterPanel', 'suppressMenuMainPanel', 'suppressMenuColumnPanel',
     'enableStatusBar', 'rememberGroupStateWhenNewData', 'enableCellChangeFlash', 'suppressDragLeaveHidesColumns',
     'suppressMiddleClickScrolls', 'suppressPreventDefaultOnMouseWheel', 'suppressUseColIdForGroups',
-    'suppressCopyRowsToClipboard', 'pivotMode', 'suppressAggFuncInHeader', 'suppressColumnVirtualisation',
+    'suppressCopyRowsToClipboard', 'pivotMode', 'suppressAggFuncInHeader', 'suppressAggFuncInHeader', 'suppressAggAtRootLevel',
     'suppressFocusAfterRefresh', 'functionsPassive', 'functionsReadOnly', 'suppressRowHoverClass',
     'animateRows', 'groupSelectsFiltered', 'groupRemoveSingleChildren', 'enableRtl', 'suppressClickEdit',
     'enableGroupEdit', 'embedFullWidthRows', 'suppressTabbing', 'suppressPaginationPanel', 'floatingFilter',
     'groupHideOpenParents', 'groupMultiAutoColumn', 'pagination', 'stopEditingWhenGridLosesFocus',
-    'paginationAutoPageSize', 'suppressScrollOnNewData'
+    'paginationAutoPageSize', 'suppressScrollOnNewData', 'purgeClosedRowNodes', 'cacheQuickFilter',
+    'deltaRowDataMode'
 ];
 ComponentUtil.FUNCTION_PROPERTIES = ['headerCellRenderer', 'localeTextFunc', 'groupRowInnerRenderer', 'groupRowInnerRendererFramework',
     'dateComponent', 'dateComponentFramework', 'groupRowRenderer', 'groupRowRendererFramework', 'isScrollLag', 'isExternalFilterPresent',
@@ -206,7 +211,7 @@ ComponentUtil.FUNCTION_PROPERTIES = ['headerCellRenderer', 'localeTextFunc', 'gr
     'getNodeChildDetails', 'groupRowAggNodes', 'getRowNodeId', 'isFullWidthCell', 'fullWidthCellRenderer',
     'fullWidthCellRendererFramework', 'doesDataFlower', 'processSecondaryColDef', 'processSecondaryColGroupDef',
     'getBusinessKeyForNode', 'sendToClipboard', 'navigateToNextCell', 'tabToNextCell',
-    'processCellFromClipboard', 'getDocument'];
+    'processCellFromClipboard', 'getDocument', 'postProcessPopup'];
 ComponentUtil.ALL_PROPERTIES = ComponentUtil.ARRAY_PROPERTIES
     .concat(ComponentUtil.OBJECT_PROPERTIES)
     .concat(ComponentUtil.STRING_PROPERTIES)

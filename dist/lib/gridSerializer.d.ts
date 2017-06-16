@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { Column } from "./entities/column";
@@ -7,6 +7,7 @@ import { RowNode } from "./entities/rowNode";
 import { ValueService } from "./valueService";
 import { GridOptionsWrapper } from "./gridOptionsWrapper";
 import { ExportParams, ProcessCellForExportParams, ProcessHeaderForExportParams } from "./exportParams";
+import { ColumnGroupChild } from "./entities/columnGroupChild";
 /**
  * This interface works in conjuction with the GridSerializer. When serializing a grid, an instance that implements this interface
  * must be passed in, the serializer will call back to the provided methods and finally call to parse to obtain the final result
@@ -85,6 +86,8 @@ export declare class GridSerializer {
     private balancedColumnTreeBuilder;
     private gridOptionsWrapper;
     serialize<T>(gridSerializingSession: GridSerializingSession<T>, userParams?: ExportParams<T>): string;
+    recursivelyAddHeaderGroups<T>(displayedGroups: ColumnGroupChild[], gridSerializingSession: GridSerializingSession<T>): void;
+    private doAddHeaderHeader<T>(gridSerializingSession, displayedGroups);
 }
 export declare enum RowType {
     HEADER_GROUPING = 0,

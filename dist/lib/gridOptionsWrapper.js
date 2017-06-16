@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -67,16 +67,27 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
         this.gridOptions.columnApi = null;
     };
     GridOptionsWrapper.prototype.init = function () {
-        this.eventService.addGlobalListener(this.globalEventHandler.bind(this));
+        var async = this.useAsyncEvents();
+        this.eventService.addGlobalListener(this.globalEventHandler.bind(this), async);
         this.setupFrameworkComponents();
         if (this.isGroupSelectsChildren() && this.isSuppressParentsInRowNodes()) {
             console.warn('ag-Grid: groupSelectsChildren does not work wth suppressParentsInRowNodes, this selection method needs the part in rowNode to work');
         }
-        if (this.isGroupSelectsChildren() && !this.isRowSelectionMulti()) {
-            console.warn('ag-Grid: rowSelectionMulti must be true for groupSelectsChildren to make sense');
+        if (this.isGroupSelectsChildren()) {
+            if (!this.isRowSelectionMulti()) {
+                console.warn('ag-Grid: rowSelectionMulti must be true for groupSelectsChildren to make sense');
+            }
+            if (this.isRowModelEnterprise()) {
+                console.warn('ag-Grid: group selects children is NOT support for Enterprise Row Model. ' +
+                    'This is because the rows are lazy loaded, so selecting a group is not possible as' +
+                    'the grid has no way of knowing what the children are.');
+            }
         }
         if (this.isGroupRemoveSingleChildren() && this.isGroupHideOpenParents()) {
             console.warn('ag-Grid: groupRemoveSingleChildren and groupHideOpenParents do not work with each other, you need to pick one. And don\'t ask us how to us these together on our support forum either you will get the same answer!');
+        }
+        if (this.isForPrint() && this.isAutoHeight()) {
+            console.warn('ag-Grid: properties forPrint and autoHeight do not work with each other, please pick only one.');
         }
     };
     GridOptionsWrapper.prototype.setupFrameworkComponents = function () {
@@ -84,8 +95,23 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
         this.groupRowRenderer = this.frameworkFactory.gridOptionsGroupRowRenderer(this.gridOptions);
         this.groupRowInnerRenderer = this.frameworkFactory.gridOptionsGroupRowInnerRenderer(this.gridOptions);
     };
-    GridOptionsWrapper.prototype.getDomDataKey = function () {
-        return this.domDataKey;
+    // returns the dom data, or undefined if not found
+    GridOptionsWrapper.prototype.getDomData = function (element, key) {
+        var domData = element[this.domDataKey];
+        if (domData) {
+            return domData[key];
+        }
+        else {
+            return undefined;
+        }
+    };
+    GridOptionsWrapper.prototype.setDomData = function (element, key, value) {
+        var domData = element[this.domDataKey];
+        if (utils_1.Utils.missing(domData)) {
+            domData = {};
+            element[this.domDataKey] = domData;
+        }
+        domData[key] = value;
     };
     // the cellRenderers come from the instances for this class, not from gridOptions, which allows
     // the baseFrameworkFactory to replace with framework specific ones
@@ -98,18 +124,10 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
     GridOptionsWrapper.prototype.isRowSelectionMulti = function () { return this.gridOptions.rowSelection === 'multiple'; };
     GridOptionsWrapper.prototype.getContext = function () { return this.gridOptions.context; };
     GridOptionsWrapper.prototype.isPivotMode = function () { return isTrue(this.gridOptions.pivotMode); };
-    GridOptionsWrapper.prototype.isRowModelServerPagination = function () { return this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_PAGINATION; };
-    GridOptionsWrapper.prototype.isRowModelInfinite = function () {
-        return this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_VIRTUAL_DEPRECATED
-            || this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_INFINITE;
-    };
+    GridOptionsWrapper.prototype.isRowModelInfinite = function () { return this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_INFINITE; };
     GridOptionsWrapper.prototype.isRowModelViewport = function () { return this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_VIEWPORT; };
     GridOptionsWrapper.prototype.isRowModelEnterprise = function () { return this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_ENTERPRISE; };
-    GridOptionsWrapper.prototype.isRowModelDefault = function () {
-        return !(this.isRowModelServerPagination() ||
-            this.isRowModelInfinite() ||
-            this.isRowModelViewport());
-    };
+    GridOptionsWrapper.prototype.isRowModelDefault = function () { return utils_1.Utils.missing(this.gridOptions.rowModelType) || this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_NORMAL; };
     GridOptionsWrapper.prototype.isFullRowEdit = function () { return this.gridOptions.editType === 'fullRow'; };
     GridOptionsWrapper.prototype.isSuppressFocusAfterRefresh = function () { return isTrue(this.gridOptions.suppressFocusAfterRefresh); };
     GridOptionsWrapper.prototype.isShowToolPanel = function () { return isTrue(this.gridOptions.showToolPanel); };
@@ -132,6 +150,7 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
         return isTrue(this.gridOptions.toolPanelSuppressPivotMode);
     };
     GridOptionsWrapper.prototype.isSuppressTouch = function () { return isTrue(this.gridOptions.suppressTouch); };
+    GridOptionsWrapper.prototype.useAsyncEvents = function () { return !isTrue(this.gridOptions.suppressAsyncEvents); };
     GridOptionsWrapper.prototype.isEnableCellChangeFlash = function () { return isTrue(this.gridOptions.enableCellChangeFlash); };
     GridOptionsWrapper.prototype.isGroupSelectsChildren = function () { return isTrue(this.gridOptions.groupSelectsChildren); };
     GridOptionsWrapper.prototype.isGroupSelectsFiltered = function () { return isTrue(this.gridOptions.groupSelectsFiltered); };
@@ -146,7 +165,8 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
     GridOptionsWrapper.prototype.isGroupSuppressAutoColumn = function () { return isTrue(this.gridOptions.groupSuppressAutoColumn); };
     GridOptionsWrapper.prototype.isSuppressDragLeaveHidesColumns = function () { return isTrue(this.gridOptions.suppressDragLeaveHidesColumns); };
     GridOptionsWrapper.prototype.isSuppressScrollOnNewData = function () { return isTrue(this.gridOptions.suppressScrollOnNewData); };
-    GridOptionsWrapper.prototype.isForPrint = function () { return isTrue(this.gridOptions.forPrint); };
+    GridOptionsWrapper.prototype.isForPrint = function () { return this.gridOptions.domLayout === 'forPrint'; };
+    GridOptionsWrapper.prototype.isAutoHeight = function () { return this.gridOptions.domLayout === 'autoHeight'; };
     GridOptionsWrapper.prototype.isSuppressHorizontalScroll = function () { return isTrue(this.gridOptions.suppressHorizontalScroll); };
     GridOptionsWrapper.prototype.isSuppressLoadingOverlay = function () { return isTrue(this.gridOptions.suppressLoadingOverlay); };
     GridOptionsWrapper.prototype.isSuppressNoRowsOverlay = function () { return isTrue(this.gridOptions.suppressNoRowsOverlay); };
@@ -157,20 +177,26 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
     GridOptionsWrapper.prototype.isSuppressRowHoverClass = function () { return isTrue(this.gridOptions.suppressRowHoverClass); };
     GridOptionsWrapper.prototype.isSuppressTabbing = function () { return isTrue(this.gridOptions.suppressTabbing); };
     GridOptionsWrapper.prototype.getQuickFilterText = function () { return this.gridOptions.quickFilterText; };
+    GridOptionsWrapper.prototype.isCacheQuickFilter = function () { return isTrue(this.gridOptions.cacheQuickFilter); };
     GridOptionsWrapper.prototype.isUnSortIcon = function () { return isTrue(this.gridOptions.unSortIcon); };
     GridOptionsWrapper.prototype.isSuppressMenuHide = function () { return isTrue(this.gridOptions.suppressMenuHide); };
     GridOptionsWrapper.prototype.getRowStyle = function () { return this.gridOptions.rowStyle; };
     GridOptionsWrapper.prototype.getRowClass = function () { return this.gridOptions.rowClass; };
     GridOptionsWrapper.prototype.getRowStyleFunc = function () { return this.gridOptions.getRowStyle; };
     GridOptionsWrapper.prototype.getRowClassFunc = function () { return this.gridOptions.getRowClass; };
+    GridOptionsWrapper.prototype.getPostProcessPopupFunc = function () { return this.gridOptions.postProcessPopup; };
     GridOptionsWrapper.prototype.getDoesDataFlowerFunc = function () { return this.gridOptions.doesDataFlower; };
     GridOptionsWrapper.prototype.getIsFullWidthCellFunc = function () { return this.gridOptions.isFullWidthCell; };
     GridOptionsWrapper.prototype.getFullWidthCellRendererParams = function () { return this.gridOptions.fullWidthCellRendererParams; };
-    GridOptionsWrapper.prototype.isEmbedFullWidthRows = function () { return isTrue(this.gridOptions.embedFullWidthRows); };
+    GridOptionsWrapper.prototype.isEmbedFullWidthRows = function () {
+        // if autoHeight, we always embed fullWidth rows, otherwise we let the user decide
+        return this.isAutoHeight() || isTrue(this.gridOptions.embedFullWidthRows);
+    };
     GridOptionsWrapper.prototype.getBusinessKeyForNodeFunc = function () { return this.gridOptions.getBusinessKeyForNode; };
     GridOptionsWrapper.prototype.getHeaderCellRenderer = function () { return this.gridOptions.headerCellRenderer; };
     GridOptionsWrapper.prototype.getApi = function () { return this.gridOptions.api; };
     GridOptionsWrapper.prototype.getColumnApi = function () { return this.gridOptions.columnApi; };
+    GridOptionsWrapper.prototype.isDeltaRowDataMode = function () { return isTrue(this.gridOptions.deltaRowDataMode); };
     GridOptionsWrapper.prototype.isEnableColResize = function () { return isTrue(this.gridOptions.enableColResize); };
     GridOptionsWrapper.prototype.isSingleClickEdit = function () { return isTrue(this.gridOptions.singleClickEdit); };
     GridOptionsWrapper.prototype.isSuppressClickEdit = function () { return isTrue(this.gridOptions.suppressClickEdit); };
@@ -178,11 +204,12 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
     GridOptionsWrapper.prototype.getGroupDefaultExpanded = function () { return this.gridOptions.groupDefaultExpanded; };
     GridOptionsWrapper.prototype.getAutoSizePadding = function () { return this.gridOptions.autoSizePadding; };
     GridOptionsWrapper.prototype.getMaxConcurrentDatasourceRequests = function () { return this.gridOptions.maxConcurrentDatasourceRequests; };
-    GridOptionsWrapper.prototype.getMaxPagesInCache = function () { return this.gridOptions.maxPagesInCache; };
-    GridOptionsWrapper.prototype.getPaginationOverflowSize = function () { return this.gridOptions.paginationOverflowSize; };
+    GridOptionsWrapper.prototype.getMaxBlocksInCache = function () { return this.gridOptions.maxBlocksInCache; };
+    GridOptionsWrapper.prototype.getCacheOverflowSize = function () { return this.gridOptions.cacheOverflowSize; };
     GridOptionsWrapper.prototype.getPaginationPageSize = function () { return this.gridOptions.paginationPageSize; };
-    GridOptionsWrapper.prototype.getInfiniteBlockSize = function () { return this.gridOptions.infiniteBlockSize; };
+    GridOptionsWrapper.prototype.getCacheBlockSize = function () { return this.gridOptions.cacheBlockSize; };
     GridOptionsWrapper.prototype.getInfiniteInitialRowCount = function () { return this.gridOptions.infiniteInitialRowCount; };
+    GridOptionsWrapper.prototype.isPurgeClosedRowNodes = function () { return isTrue(this.gridOptions.purgeClosedRowNodes); };
     GridOptionsWrapper.prototype.getPaginationStartPage = function () { return this.gridOptions.paginationStartPage; };
     GridOptionsWrapper.prototype.isSuppressPaginationPanel = function () { return isTrue(this.gridOptions.suppressPaginationPanel); };
     GridOptionsWrapper.prototype.getRowData = function () { return this.gridOptions.rowData; };
@@ -222,6 +249,7 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
     GridOptionsWrapper.prototype.isSuppressMenuFilterPanel = function () { return isTrue(this.gridOptions.suppressMenuFilterPanel); };
     GridOptionsWrapper.prototype.isSuppressUseColIdForGroups = function () { return isTrue(this.gridOptions.suppressUseColIdForGroups); };
     GridOptionsWrapper.prototype.isSuppressAggFuncInHeader = function () { return isTrue(this.gridOptions.suppressAggFuncInHeader); };
+    GridOptionsWrapper.prototype.isSuppressAggAtRootLevel = function () { return isTrue(this.gridOptions.suppressAggAtRootLevel); };
     GridOptionsWrapper.prototype.isSuppressMenuMainPanel = function () { return isTrue(this.gridOptions.suppressMenuMainPanel); };
     GridOptionsWrapper.prototype.isEnableRangeSelection = function () { return isTrue(this.gridOptions.enableRangeSelection); };
     GridOptionsWrapper.prototype.isPaginationAutoPageSize = function () { return isTrue(this.gridOptions.paginationAutoPageSize); };
@@ -287,6 +315,38 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
         }
         else {
             return 25;
+        }
+    };
+    GridOptionsWrapper.prototype.getFloatingFiltersHeight = function () {
+        if (typeof this.gridOptions.floatingFiltersHeight === 'number') {
+            return this.gridOptions.floatingFiltersHeight;
+        }
+        else {
+            return 20;
+        }
+    };
+    GridOptionsWrapper.prototype.getGroupHeaderHeight = function () {
+        if (typeof this.gridOptions.groupHeaderHeight === 'number') {
+            return this.gridOptions.groupHeaderHeight;
+        }
+        else {
+            return this.getHeaderHeight();
+        }
+    };
+    GridOptionsWrapper.prototype.getPivotHeaderHeight = function () {
+        if (typeof this.gridOptions.pivotHeaderHeight === 'number') {
+            return this.gridOptions.pivotHeaderHeight;
+        }
+        else {
+            return this.getHeaderHeight();
+        }
+    };
+    GridOptionsWrapper.prototype.getPivotGroupHeaderHeight = function () {
+        if (typeof this.gridOptions.pivotGroupHeaderHeight === 'number') {
+            return this.gridOptions.pivotGroupHeaderHeight;
+        }
+        else {
+            return this.getGroupHeaderHeight();
         }
     };
     GridOptionsWrapper.prototype.isExternalFilterPresent = function () {
@@ -410,15 +470,23 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
             console.warn('ag-grid: since version 8.0.x checkboxSelection is not supported as a grid option. ' +
                 'If you want this on all columns, use defaultColDef instead and set it there');
         }
-        if (this.gridOptions.rowModelType === constants_1.Constants.ROW_MODEL_TYPE_VIRTUAL_DEPRECATED) {
-            console.warn('ag-grid: since version 8.3.x row model type "virtual" is now called "infinite", ' +
-                'the grid will still work, but please change the property to use "infinite"');
-        }
         if (options.paginationInitialRowCount) {
             console.warn('ag-grid: since version 9.0.x paginationInitialRowCount is now called infiniteInitialRowCount');
         }
         if (options.infinitePageSize) {
-            console.warn('ag-grid: since version 9.0.x infinitePageSize is now called infiniteBlockSize');
+            console.warn('ag-grid: since version 9.0.x infinitePageSize is now called cacheBlockSize');
+        }
+        if (options.infiniteBlockSize) {
+            console.warn('ag-grid: since version 10.0.x infinitePageSize is now called cacheBlockSize');
+        }
+        if (options.maxPagesInCache) {
+            console.warn('ag-grid: since version 10.0.x maxPagesInCache is now called maxBlocksInCache');
+        }
+        if (options.paginationOverflowSize) {
+            console.warn('ag-grid: since version 10.0.x paginationOverflowSize is now called cacheOverflowSize');
+        }
+        if (options.forPrint) {
+            console.warn('ag-grid: since version 10.1.x, use property domLayout="forPrint" instead of forPrint=true');
         }
     };
     GridOptionsWrapper.prototype.getLocaleTextFunc = function () {
@@ -484,6 +552,11 @@ var GridOptionsWrapper = GridOptionsWrapper_1 = (function () {
 }());
 GridOptionsWrapper.MIN_COL_WIDTH = 10;
 GridOptionsWrapper.PROP_HEADER_HEIGHT = 'headerHeight';
+GridOptionsWrapper.PROP_GROUP_REMOVE_SINGLE_CHILDREN = 'groupRemoveSingleChildren';
+GridOptionsWrapper.PROP_PIVOT_HEADER_HEIGHT = 'pivotHeaderHeight';
+GridOptionsWrapper.PROP_GROUP_HEADER_HEIGHT = 'groupHeaderHeight';
+GridOptionsWrapper.PROP_PIVOT_GROUP_HEADER_HEIGHT = 'pivotGroupHeaderHeight';
+GridOptionsWrapper.PROP_FLOATING_FILTERS_HEIGHT = 'floatingFiltersHeight';
 __decorate([
     context_1.Autowired('gridOptions'),
     __metadata("design:type", Object)

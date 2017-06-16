@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -32,9 +32,9 @@ var Context = (function () {
     };
     Context.prototype.addComponent = function (componentMeta) {
         // get name of the class as a string
-        // var className = _.getNameOfClass(ComponentClass);
+        // let className = _.getNameOfClass(ComponentClass);
         // insert a dash after every capital letter
-        // var classEscaped = className.replace(/([A-Z])/g, "-$1").toLowerCase();
+        // let classEscaped = className.replace(/([A-Z])/g, "-$1").toLowerCase();
         var classEscaped = componentMeta.componentName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
         // put all to upper case
         var classUpperCase = classEscaped.toUpperCase();
@@ -99,7 +99,7 @@ var Context = (function () {
     Context.prototype.createBeanEntry = function (Bean) {
         var metaData = Bean.prototype.__agBeanMetaData;
         if (!metaData) {
-            var beanName;
+            var beanName = void 0;
             if (Bean.prototype.constructor) {
                 beanName = Bean.prototype.constructor.name;
             }
@@ -305,7 +305,7 @@ function Qualifier(name) {
         var props;
         if (typeof index === 'number') {
             // it's a parameter on a method
-            var methodName;
+            var methodName = void 0;
             if (methodOrAttributeName) {
                 props = getOrCreateProps(classPrototype);
                 methodName = methodOrAttributeName;

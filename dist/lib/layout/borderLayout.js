@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -17,18 +17,25 @@ var BorderLayout = (function () {
         this.isLayoutPanel = true;
         this.fullHeight = !params.north && !params.south;
         var template;
-        if (!params.dontFill) {
+        if (params.dontFill) {
+            template = BorderLayout.TEMPLATE_DONT_FILL;
+            this.horizontalLayoutActive = false;
+            this.verticalLayoutActive = false;
+        }
+        else if (params.fillHorizontalOnly) {
+            template = BorderLayout.TEMPLATE_DONT_FILL;
+            this.horizontalLayoutActive = true;
+            this.verticalLayoutActive = false;
+        }
+        else {
             if (this.fullHeight) {
                 template = BorderLayout.TEMPLATE_FULL_HEIGHT;
             }
             else {
                 template = BorderLayout.TEMPLATE_NORMAL;
             }
-            this.layoutActive = true;
-        }
-        else {
-            template = BorderLayout.TEMPLATE_DONT_FILL;
-            this.layoutActive = false;
+            this.horizontalLayoutActive = true;
+            this.verticalLayoutActive = true;
         }
         this.eGui = utils_1.Utils.loadTemplate(template);
         this.id = 'borderLayout';
@@ -108,10 +115,15 @@ var BorderLayout = (function () {
                 atLeastOneChanged = true;
             }
         });
-        if (this.layoutActive) {
-            var ourHeightChanged = this.layoutHeight();
+        if (this.horizontalLayoutActive) {
             var ourWidthChanged = this.layoutWidth();
-            if (ourHeightChanged || ourWidthChanged) {
+            if (ourWidthChanged) {
+                atLeastOneChanged = true;
+            }
+        }
+        if (this.verticalLayoutActive) {
+            var ourHeightChanged = this.layoutHeight();
+            if (ourHeightChanged) {
                 atLeastOneChanged = true;
             }
         }
@@ -228,6 +240,7 @@ var BorderLayout = (function () {
     };
     return BorderLayout;
 }());
+// this is used if there user has not specified any north or south parts
 BorderLayout.TEMPLATE_FULL_HEIGHT = '<div class="ag-bl ag-bl-full-height">' +
     '  <div class="ag-bl-west ag-bl-full-height-west" id="west"></div>' +
     '  <div class="ag-bl-east ag-bl-full-height-east" id="east"></div>' +
@@ -246,10 +259,10 @@ BorderLayout.TEMPLATE_NORMAL = '<div class="ag-bl ag-bl-normal">' +
     '</div>';
 BorderLayout.TEMPLATE_DONT_FILL = '<div class="ag-bl ag-bl-dont-fill">' +
     '  <div id="north"></div>' +
-    '  <div id="centerRow">' +
-    '    <div id="west"></div>' +
-    '    <div id="east"></div>' +
-    '    <div id="center"></div>' +
+    '  <div id="centerRow" class="ag-bl-center-row ag-bl-dont-fill-center-row">' +
+    '    <div id="west" class="ag-bl-west ag-bl-dont-fill-west"></div>' +
+    '    <div id="east" class="ag-bl-east ag-bl-dont-fill-east"></div>' +
+    '    <div id="center" class="ag-bl-center ag-bl-dont-fill-center"></div>' +
     '  </div>' +
     '  <div id="south"></div>' +
     '  <div class="ag-bl-overlay" id="overlay"></div>' +

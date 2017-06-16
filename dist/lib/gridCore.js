@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -61,8 +61,24 @@ var GridCore = (function () {
             north: createTopPanelGui,
             south: eSouthPanel,
             dontFill: this.gridOptionsWrapper.isForPrint(),
+            fillHorizontalOnly: this.gridOptionsWrapper.isAutoHeight(),
             name: 'eRootPanel'
         });
+        // parts of the CSS need to know if we are in 'for print' mode or not,
+        // so we add a class to allow applying CSS based on this.
+        if (this.gridOptionsWrapper.isForPrint()) {
+            utils_1.Utils.addCssClass(this.eRootPanel.getGui(), 'ag-layout-for-print');
+            // kept to limit breaking changes, ag-no-scrolls was renamed to ag-layout-for-print
+            utils_1.Utils.addCssClass(this.eRootPanel.getGui(), 'ag-no-scrolls');
+        }
+        else if (this.gridOptionsWrapper.isAutoHeight()) {
+            utils_1.Utils.addCssClass(this.eRootPanel.getGui(), 'ag-layout-auto-height');
+        }
+        else {
+            utils_1.Utils.addCssClass(this.eRootPanel.getGui(), 'ag-layout-normal');
+            // kept to limit breaking changes, ag-scrolls was renamed to ag-layout-normal
+            utils_1.Utils.addCssClass(this.eRootPanel.getGui(), 'ag-scrolls');
+        }
         // see what the grid options are for default of toolbar
         this.showToolPanel(this.gridOptionsWrapper.isShowToolPanel());
         this.eGridDiv.appendChild(this.eRootPanel.getGui());
@@ -125,8 +141,7 @@ var GridCore = (function () {
             console.warn('ag-Grid: status bar is only available in ag-Grid-Enterprise');
         }
         var statusBarEnabled = this.statusBar && this.gridOptionsWrapper.isEnableStatusBar();
-        var isPaging = this.gridOptionsWrapper.isPagination() ||
-            this.gridOptionsWrapper.isRowModelServerPagination();
+        var isPaging = this.gridOptionsWrapper.isPagination();
         var paginationPanelEnabled = isPaging
             && !this.gridOptionsWrapper.isForPrint()
             && !this.gridOptionsWrapper.isSuppressPaginationPanel();
@@ -253,11 +268,11 @@ var GridCore = (function () {
         // both of the two below should be done in gridPanel, the gridPanel should register 'resize' to the panel
         if (sizeChanged) {
             this.rowRenderer.drawVirtualRowsWithLock();
-            var event = {
+            var event_1 = {
                 clientWidth: this.eRootPanel.getGui().clientWidth,
                 clientHeight: this.eRootPanel.getGui().clientHeight
             };
-            this.eventService.dispatchEvent(events_1.Events.EVENT_GRID_SIZE_CHANGED, event);
+            this.eventService.dispatchEvent(events_1.Events.EVENT_GRID_SIZE_CHANGED, event_1);
         }
     };
     return GridCore;

@@ -1,9 +1,9 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { Column } from "../entities/column";
 import { RowNode } from "../entities/rowNode";
-import { RenderedCell } from "./renderedCell";
+import { CellComp } from "./cellComp";
 import { LoggerFactory } from "../logger";
 import { GridCell } from "../entities/gridCell";
 import { ColDef } from "../entities/colDef";
@@ -14,7 +14,6 @@ export declare class RowRenderer extends BeanStub {
     private gridOptionsWrapper;
     private gridCore;
     private gridPanel;
-    private $compile;
     private $scope;
     private expressionService;
     private templateService;
@@ -44,13 +43,14 @@ export declare class RowRenderer extends BeanStub {
     private onModelUpdated(refreshEvent);
     private getRenderedIndexesForRowNodes(rowNodes);
     refreshRows(rowNodes: RowNode[]): void;
+    private getCellToRestoreFocusToAfterRefresh(params);
     refreshView(params?: RefreshViewParams): void;
     private getLockOnRefresh();
     private releaseLockOnRefresh();
     private restoreFocusedCell(gridCell);
     softRefreshView(): void;
     stopEditing(cancel?: boolean): void;
-    forEachRenderedCell(callback: (renderedCell: RenderedCell) => void): void;
+    forEachRenderedCell(callback: (renderedCell: CellComp) => void): void;
     private forEachRenderedRow(callback);
     addRenderedRowListener(eventName: string, rowIndex: number, callback: Function): void;
     refreshCells(rowNodes: RowNode[], cols: (string | ColDef | Column)[], animate?: boolean): void;
@@ -69,7 +69,7 @@ export declare class RowRenderer extends BeanStub {
     navigateToNextCell(event: KeyboardEvent, key: number, rowIndex: number, column: Column, floating: string): void;
     startEditingCell(gridCell: GridCell, keyPress: number, charPress: string): void;
     private getComponentForCell(gridCell);
-    onTabKeyDown(previousRenderedCell: RenderedCell, keyboardEvent: KeyboardEvent): void;
+    onTabKeyDown(previousRenderedCell: CellComp, keyboardEvent: KeyboardEvent): void;
     tabToNextCell(backwards: boolean): boolean;
     private moveToCellAfter(previousRenderedCell, backwards);
     private moveEditToNextCell(previousRenderedCell, nextRenderedCell);

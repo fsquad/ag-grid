@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -60,12 +60,12 @@ var stylingService_1 = require("./styling/stylingService");
 var columnHoverService_1 = require("./rendering/columnHoverService");
 var columnAnimationService_1 = require("./rendering/columnAnimationService");
 var componentProvider_1 = require("./componentProvider");
-var serverPaginationService_1 = require("./rowModels/pagination/serverPaginationService");
 var sortService_1 = require("./rowNodes/sortService");
 var filterService_1 = require("./rowNodes/filterService");
 var rowNodeFactory_1 = require("./rowNodes/rowNodeFactory");
 var autoGroupColService_1 = require("./columnController/autoGroupColService");
 var paginationProxy_1 = require("./rowModels/paginationProxy");
+var immutableService_1 = require("./rowModels/inMemory/immutableService");
 var Grid = (function () {
     function Grid(eGridDiv, gridOptions, params) {
         if (!eGridDiv) {
@@ -112,13 +112,14 @@ var Grid = (function () {
                 dragAndDropService_1.DragAndDropService, sortController_1.SortController, columnController_1.ColumnApi, focusedCellController_1.FocusedCellController, mouseEventService_1.MouseEventService,
                 cellNavigationService_1.CellNavigationService, filterStage_1.FilterStage, sortStage_1.SortStage, flattenStage_1.FlattenStage, focusService_1.FocusService, filterService_1.FilterService, rowNodeFactory_1.RowNodeFactory,
                 cellEditorFactory_1.CellEditorFactory, cellRendererService_1.CellRendererService, valueFormatterService_1.ValueFormatterService, stylingService_1.StylingService, scrollVisibleService_1.ScrollVisibleService,
-                columnHoverService_1.ColumnHoverService, columnAnimationService_1.ColumnAnimationService, serverPaginationService_1.ServerPaginationService, sortService_1.SortService, autoGroupColService_1.AutoGroupColService],
+                columnHoverService_1.ColumnHoverService, columnAnimationService_1.ColumnAnimationService, sortService_1.SortService, autoGroupColService_1.AutoGroupColService, immutableService_1.ImmutableService],
             components: [
                 { componentName: 'AgCheckbox', theClass: agCheckbox_1.AgCheckbox }
             ],
             debug: !!gridOptions.debug
         };
-        this.context = new context_1.Context(contextParams, new logger_1.Logger('Context', contextParams.debug));
+        var isLoggingFunc = function () { return contextParams.debug; };
+        this.context = new context_1.Context(contextParams, new logger_1.Logger('Context', isLoggingFunc));
         var eventService = this.context.getBean('eventService');
         var readyEvent = {
             api: gridOptions.api,
@@ -149,6 +150,9 @@ var Grid = (function () {
                 if (rowModelType === 'viewport') {
                     console.error('ag-Grid: rowModelType viewport is only available in ag-Grid Enterprise');
                 }
+                if (rowModelType === 'enterprise') {
+                    console.error('ag-Grid: rowModelType viewport is only available in ag-Grid Enterprise');
+                }
             }
         }
         return inMemoryRowModel_1.InMemoryRowModel;
@@ -162,9 +166,7 @@ var Grid = (function () {
 // the default is InMemoryRowModel, which is also used for pagination.
 // the enterprise adds viewport to this list.
 Grid.RowModelClasses = {
-    virtual: infiniteRowModel_1.InfiniteRowModel,
     infinite: infiniteRowModel_1.InfiniteRowModel,
-    pagination: inMemoryRowModel_1.InMemoryRowModel,
     normal: inMemoryRowModel_1.InMemoryRowModel
 };
 exports.Grid = Grid;

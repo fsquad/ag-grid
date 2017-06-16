@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -51,27 +51,27 @@ var ComponentProvider = (function () {
             },
             setFloatingFilterComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: floatingFilter_1.SetFloatingFilterComp
             },
             textFloatingFilterComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: floatingFilter_1.TextFloatingFilterComp
             },
             numberFloatingFilterComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: floatingFilter_1.NumberFloatingFilterComp
             },
             dateFloatingFilterComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: floatingFilter_1.DateFloatingFilterComp
             },
             readModelAsStringFloatingFilterComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: floatingFilter_1.ReadModelAsStringFloatingFilterComp
             },
             floatingFilterWrapperComponent: {
@@ -81,17 +81,17 @@ var ComponentProvider = (function () {
             },
             emptyFloatingFilterWrapperComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: floatingFilterWrapper_1.EmptyFloatingFilterWrapperComp
             },
             floatingFilterComponent: {
                 mandatoryMethodList: ['onParentModelChanged'],
-                optionalMethodList: [],
+                optionalMethodList: ['afterGuiAttached'],
                 defaultComponent: null
             },
             filterComponent: {
-                mandatoryMethodList: [],
-                optionalMethodList: [],
+                mandatoryMethodList: ['isFilterActive', 'doesFilterPass', 'getModel', 'setModel'],
+                optionalMethodList: ['afterGuiAttached', 'onNewRowsLoaded', 'getModelAsString', 'onFloatingFilterChanged'],
                 defaultComponent: null
             }
         };
@@ -152,7 +152,7 @@ var ComponentProvider = (function () {
         }
         //Using framework component
         var FrameworkComponentRaw = componentToUse.component;
-        return this.frameworkComponentWrapper.wrap(FrameworkComponentRaw, thisComponentConfig.mandatoryMethodList);
+        return this.frameworkComponentWrapper.wrap(FrameworkComponentRaw, thisComponentConfig.mandatoryMethodList, thisComponentConfig.optionalMethodList);
     };
     ComponentProvider.prototype.createAgGridComponent = function (holder, componentName, defaultComponentName, agGridParams, mandatory) {
         if (mandatory === void 0) { mandatory = true; }
@@ -169,6 +169,9 @@ var ComponentProvider = (function () {
         var finalParams = {};
         utils_1._.mergeDeep(finalParams, agGridParams);
         utils_1._.mergeDeep(finalParams, customParams);
+        if (!finalParams.api) {
+            finalParams.api = this.gridOptions.api;
+        }
         return finalParams;
     };
     ComponentProvider.prototype.newDateComponent = function (params) {

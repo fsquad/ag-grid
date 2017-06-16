@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { GridOptionsWrapper } from "./gridOptionsWrapper";
@@ -30,6 +30,7 @@ export declare class Utils {
     static mapObject<TResult>(object: any, callback: (item: any) => TResult): TResult[];
     static forEach<T>(array: T[], callback: (item: T, index: number) => void): void;
     static filter<T>(array: T[], callback: (item: T) => boolean): T[];
+    static getAllKeysInObjects(objects: any[]): string[];
     static mergeDeep(object: any, source: any): void;
     static assign(object: any, source: any): void;
     static parseYyyyMmDdToDate(yyyyMmDd: string, separator: string): Date;
@@ -212,11 +213,18 @@ export declare class Utils {
      *
      */
     static normalizeWheel(event: any): any;
+    /**
+     * https://stackoverflow.com/questions/24004791/can-someone-explain-the-debounce-function-in-javascript
+     */
+    static debounce(func: () => void, wait: number, immediate?: boolean): () => void;
+    static referenceCompare(left: any, right: any): boolean;
 }
 export declare class NumberSequence {
     private nextValue;
     private step;
     constructor(initValue?: number, step?: number);
     next(): number;
+    peek(): number;
+    skip(count: number): void;
 }
 export declare let _: typeof Utils;

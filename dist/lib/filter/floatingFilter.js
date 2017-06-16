@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -35,30 +35,64 @@ var constants_1 = require("../constants");
 var InputTextFloatingFilterComp = (function (_super) {
     __extends(InputTextFloatingFilterComp, _super);
     function InputTextFloatingFilterComp() {
-        return _super.call(this, "<div><input  ref=\"eColumnFloatingFilter\" class=\"ag-floating-filter-input\"></div>") || this;
+        var _this = _super.call(this, "<div><input  ref=\"eColumnFloatingFilter\" class=\"ag-floating-filter-input\"></div>") || this;
+        _this.lastKnownModel = null;
+        return _this;
     }
     InputTextFloatingFilterComp.prototype.init = function (params) {
         this.onFloatingFilterChanged = params.onFloatingFilterChanged;
         this.currentParentModel = params.currentParentModel;
-        this.addDestroyableEventListener(this.eColumnFloatingFilter, 'input', this.syncUpWithParentFilter.bind(this));
-        this.addDestroyableEventListener(this.eColumnFloatingFilter, 'keypress', this.checkApply.bind(this));
+        var debounceMs = params.debounceMs != null ? params.debounceMs : 500;
+        var toDebounce = utils_1._.debounce(this.syncUpWithParentFilter.bind(this), debounceMs);
+        this.addDestroyableEventListener(this.eColumnFloatingFilter, 'input', toDebounce);
+        this.addDestroyableEventListener(this.eColumnFloatingFilter, 'keypress', toDebounce);
+        this.addDestroyableEventListener(this.eColumnFloatingFilter, 'keydown', toDebounce);
+        var columnDef = params.column.getDefinition();
+        if (columnDef.filterParams && columnDef.filterParams.filterOptions && columnDef.filterParams.filterOptions.length === 1 && columnDef.filterParams.filterOptions[0] === 'inRange') {
+            this.eColumnFloatingFilter.readOnly = true;
+        }
     };
     InputTextFloatingFilterComp.prototype.onParentModelChanged = function (parentModel) {
-        this.eColumnFloatingFilter.value = this.asFloatingFilterText(parentModel);
+        if (this.equalModels(this.lastKnownModel, parentModel))
+            return;
+        this.lastKnownModel = parentModel;
+        var incomingTextValue = this.asFloatingFilterText(parentModel);
+        if (incomingTextValue === this.eColumnFloatingFilter.value)
+            return;
+        this.eColumnFloatingFilter.value = incomingTextValue;
     };
-    InputTextFloatingFilterComp.prototype.syncUpWithParentFilter = function () {
-        this.onFloatingFilterChanged({
-            model: this.asParentModel(),
-            apply: false
-        });
-    };
-    InputTextFloatingFilterComp.prototype.checkApply = function (e) {
+    InputTextFloatingFilterComp.prototype.syncUpWithParentFilter = function (e) {
+        var model = this.asParentModel();
+        if (this.equalModels(this.lastKnownModel, model))
+            return;
+        var modelUpdated = null;
         if (utils_1._.isKeyPressed(e, constants_1.Constants.KEY_ENTER)) {
-            this.onFloatingFilterChanged({
-                model: this.asParentModel(),
+            modelUpdated = this.onFloatingFilterChanged({
+                model: model,
                 apply: true
             });
         }
+        else {
+            modelUpdated = this.onFloatingFilterChanged({
+                model: model,
+                apply: false
+            });
+        }
+        if (modelUpdated) {
+            this.lastKnownModel = model;
+        }
+    };
+    InputTextFloatingFilterComp.prototype.equalModels = function (left, right) {
+        if (utils_1._.referenceCompare(left, right))
+            return true;
+        if (!left || !right)
+            return false;
+        if (Array.isArray(left) || Array.isArray(right))
+            return false;
+        return (utils_1._.referenceCompare(left.type, right.type) &&
+            utils_1._.referenceCompare(left.filter, right.filter) &&
+            utils_1._.referenceCompare(left.filterTo, right.filterTo) &&
+            utils_1._.referenceCompare(left.filterType, right.filterType));
     };
     return InputTextFloatingFilterComp;
 }(component_1.Component));
@@ -80,7 +114,7 @@ var TextFloatingFilterComp = (function (_super) {
     TextFloatingFilterComp.prototype.asParentModel = function () {
         var currentParentModel = this.currentParentModel();
         return {
-            type: !currentParentModel ? 'contains' : currentParentModel.type,
+            type: currentParentModel.type,
             filter: this.eColumnFloatingFilter.value,
             filterType: 'text'
         };
@@ -112,10 +146,9 @@ var DateFloatingFilterComp = (function (_super) {
             return;
         }
         var date = utils_1._.serializeDateToYyyyMmDd(dateFilter_1.DateFilter.removeTimezone(rawDate), "-");
-        var type = 'equals';
         var dateTo = null;
+        var type = parentModel.type;
         if (parentModel) {
-            type = parentModel.type;
             dateTo = parentModel.dateTo;
         }
         this.onFloatingFilterChanged({
@@ -149,13 +182,13 @@ var NumberFloatingFilterComp = (function (_super) {
     }
     NumberFloatingFilterComp.prototype.asFloatingFilterText = function (parentModel) {
         var rawParentModel = this.currentParentModel();
-        if (!parentModel && !rawParentModel)
+        if (parentModel == null && rawParentModel == null)
             return '';
-        if (!parentModel && rawParentModel && rawParentModel.type !== 'inRange') {
+        if (parentModel == null && rawParentModel != null && rawParentModel.type !== 'inRange') {
             this.eColumnFloatingFilter.readOnly = false;
             return '';
         }
-        if (rawParentModel && rawParentModel.type === 'inRange') {
+        if (rawParentModel != null && rawParentModel.type === 'inRange') {
             this.eColumnFloatingFilter.readOnly = true;
             var number_1 = this.asNumber(rawParentModel.filter);
             var numberTo = this.asNumber(rawParentModel.filterTo);
@@ -165,32 +198,37 @@ var NumberFloatingFilterComp = (function (_super) {
         }
         var number = this.asNumber(parentModel.filter);
         this.eColumnFloatingFilter.readOnly = false;
-        return number ? number + '' : '';
+        return number != null ? number + '' : '';
     };
     NumberFloatingFilterComp.prototype.asParentModel = function () {
         var currentParentModel = this.currentParentModel();
         var filterValueNumber = this.asNumber(this.eColumnFloatingFilter.value);
         var filterValueText = this.eColumnFloatingFilter.value;
         var modelFilterValue = null;
-        if (!filterValueNumber && filterValueText === '') {
+        if (filterValueNumber == null && filterValueText === '') {
             modelFilterValue = null;
         }
-        else if (!filterValueNumber) {
+        else if (filterValueNumber == null) {
             modelFilterValue = currentParentModel.filter;
         }
         else {
             modelFilterValue = filterValueNumber;
         }
         return {
-            type: !currentParentModel ? 'equals' : currentParentModel.type,
+            type: currentParentModel.type,
             filter: modelFilterValue,
             filterTo: !currentParentModel ? null : currentParentModel.filterTo,
             filterType: 'number'
         };
     };
     NumberFloatingFilterComp.prototype.asNumber = function (value) {
-        var invalidNumber = !value || (!utils_1._.isNumeric(Number(value)));
-        return invalidNumber ? null : Number(value);
+        if (value == null)
+            return null;
+        if (value === '')
+            return null;
+        var asNumber = Number(value);
+        var invalidNumber = !utils_1._.isNumeric(asNumber);
+        return invalidNumber ? null : asNumber;
     };
     return NumberFloatingFilterComp;
 }(InputTextFloatingFilterComp));
@@ -205,15 +243,15 @@ var SetFloatingFilterComp = (function (_super) {
         this.eColumnFloatingFilter.readOnly = true;
     };
     SetFloatingFilterComp.prototype.asFloatingFilterText = function (parentModel) {
-        if (!parentModel)
+        if (!parentModel || parentModel.length === 0)
             return '';
         var arrayToDisplay = parentModel.length > 10 ? parentModel.slice(0, 10).concat(['...']) : parentModel;
         return "(" + parentModel.length + ") " + arrayToDisplay.join(",");
     };
     SetFloatingFilterComp.prototype.asParentModel = function () {
-        return this.eColumnFloatingFilter.value ?
-            this.eColumnFloatingFilter.value.split(",") :
-            [];
+        if (this.eColumnFloatingFilter.value == null || this.eColumnFloatingFilter.value === '')
+            return null;
+        return this.eColumnFloatingFilter.value.split(",");
     };
     return SetFloatingFilterComp;
 }(InputTextFloatingFilterComp));

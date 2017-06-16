@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -189,17 +189,27 @@ var Utils = (function () {
         });
         return result;
     };
+    Utils.getAllKeysInObjects = function (objects) {
+        var allValues = {};
+        objects.forEach(function (obj) {
+            if (obj) {
+                Object.keys(obj).forEach(function (key) { return allValues[key] = null; });
+            }
+        });
+        return Object.keys(allValues);
+    };
     Utils.mergeDeep = function (object, source) {
         if (this.exists(source)) {
-            this.iterateObject(source, function (key, value) {
+            this.iterateObject(source, function (key, target) {
                 var currentValue = object[key];
-                var target = source[key];
                 if (currentValue == null) {
-                    object[key] = value;
+                    object[key] = target;
+                    return;
                 }
                 if (typeof currentValue === 'object') {
                     if (target) {
-                        Utils.mergeDeep(object[key], target);
+                        Utils.mergeDeep(currentValue, target);
+                        return;
                     }
                 }
                 if (target) {
@@ -648,7 +658,7 @@ var Utils = (function () {
         }
         // now if user provided, use it
         if (userProvidedIcon) {
-            var rendererResult;
+            var rendererResult = void 0;
             if (typeof userProvidedIcon === 'function') {
                 rendererResult = userProvidedIcon();
             }
@@ -737,7 +747,9 @@ var Utils = (function () {
             var anyWindow = window;
             // taken from https://github.com/ceolter/ag-grid/issues/550
             this.isSafari = Object.prototype.toString.call(anyWindow.HTMLElement).indexOf('Constructor') > 0
-                || (function (p) { return p.toString() === "[object SafariRemoteNotification]"; })(!anyWindow.safari || anyWindow.safari.pushNotification);
+                || (function (p) {
+                    return p.toString() === "[object SafariRemoteNotification]";
+                })(!anyWindow.safari || anyWindow.safari.pushNotification);
         }
         return this.isSafari;
     };
@@ -818,6 +830,8 @@ var Utils = (function () {
      * From http://stackoverflow.com/questions/9716468/is-there-any-function-like-isnumeric-in-javascript-to-validate-numbers
      */
     Utils.isNumeric = function (value) {
+        if (value === '')
+            return false;
         return !isNaN(parseFloat(value)) && isFinite(value);
     };
     Utils.escape = function (toEscape) {
@@ -981,10 +995,61 @@ var Utils = (function () {
         if (pY && !sY) {
             sY = (pY < 1) ? -1 : 1;
         }
-        return { spinX: sX,
+        return {
+            spinX: sX,
             spinY: sY,
             pixelX: pX,
-            pixelY: pY };
+            pixelY: pY
+        };
+    };
+    /**
+     * https://stackoverflow.com/questions/24004791/can-someone-explain-the-debounce-function-in-javascript
+     */
+    Utils.debounce = function (func, wait, immediate) {
+        if (immediate === void 0) { immediate = false; }
+        // 'private' variable for instance
+        // The returned function will be able to reference this due to closure.
+        // Each call to the returned function will share this common timer.
+        var timeout;
+        // Calling debounce returns a new anonymous function
+        return function () {
+            // reference the context and args for the setTimeout function
+            var context = this, args = arguments;
+            // Should the function be called now? If immediate is true
+            //   and not already in a timeout then the answer is: Yes
+            var callNow = immediate && !timeout;
+            // This is the basic debounce behaviour where you can call this
+            //   function several times, but it will only execute once
+            //   [before or after imposing a delay].
+            //   Each time the returned function is called, the timer starts over.
+            clearTimeout(timeout);
+            // Set the new timeout
+            timeout = setTimeout(function () {
+                // Inside the timeout function, clear the timeout variable
+                // which will let the next execution run when in 'immediate' mode
+                timeout = null;
+                // Check if the function already ran with the immediate flag
+                if (!immediate) {
+                    // Call the original function with apply
+                    // apply lets you define the 'this' object as well as the arguments
+                    //    (both captured before setTimeout)
+                    func.apply(context, args);
+                }
+            }, wait);
+            // Immediate mode and no wait timer? Execute the function..
+            if (callNow)
+                func.apply(context, args);
+        };
+    };
+    ;
+    Utils.referenceCompare = function (left, right) {
+        if (left == null && right == null)
+            return true;
+        if (left == null && right)
+            return false;
+        if (left && right == null)
+            return false;
+        return left === right;
     };
     return Utils;
 }());
@@ -1000,6 +1065,12 @@ var NumberSequence = (function () {
         var valToReturn = this.nextValue;
         this.nextValue += this.step;
         return valToReturn;
+    };
+    NumberSequence.prototype.peek = function () {
+        return this.nextValue;
+    };
+    NumberSequence.prototype.skip = function (count) {
+        this.nextValue += count;
     };
     return NumberSequence;
 }());

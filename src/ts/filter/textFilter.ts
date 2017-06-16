@@ -1,6 +1,6 @@
 import {Utils as _} from "../utils";
 import {IFilterParams, IDoesFilterPassParams, SerializedFilter} from "../interfaces/iFilter";
-import {ComparableBaseFilter, BaseFilter} from "./baseFilter";
+import {ComparableBaseFilter, BaseFilter, IScalarFilterParams} from "./baseFilter";
 import {QuerySelector} from "../widgets/componentAnnotations";
 
 export interface SerializedTextFilter extends SerializedFilter {
@@ -12,8 +12,17 @@ export interface TextComparator {
     (filter:string, gridValue:any, filterText:string):boolean;
 }
 
+export interface TextFormatter {
+    (from:string):string;
+}
+
+export interface INumberFilterParams extends IScalarFilterParams{
+    debounceMs?: number;
+}
+
 export interface ITextFilterParams extends IFilterParams{
-    textCustomComparator?:TextComparator
+    textCustomComparator?:TextComparator;
+    debounceMs?: number;
 }
 
 export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams, SerializedTextFilter> {
@@ -22,23 +31,26 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
 
     private filterText: string;
     private comparator:TextComparator;
+    private formatter:TextFormatter;
+    static DEFAULT_FORMATTER:TextFormatter = (from:string)=>{
+        if (from == null) return null;
+        return from.toString().toLowerCase();
+    };
     static DEFAULT_COMPARATOR:TextComparator = (filter:string, value:any, filterText:string)=>{
-        let filterTextLoweCase = filterText.toLowerCase();
-        let valueLowerCase = value.toString().toLowerCase();
         switch (filter) {
         case TextFilter.CONTAINS:
-            return valueLowerCase.indexOf(filterTextLoweCase) >= 0;
+            return value.indexOf(filterText) >= 0;
         case TextFilter.NOT_CONTAINS:
-            return valueLowerCase.indexOf(filterTextLoweCase) === -1;
+            return value.indexOf(filterText) === -1;
         case TextFilter.EQUALS:
-            return valueLowerCase === filterTextLoweCase;
+            return value === filterText;
         case TextFilter.NOT_EQUAL:
-            return valueLowerCase != filterTextLoweCase;
+            return value != filterText;
         case TextFilter.STARTS_WITH:
-            return valueLowerCase.indexOf(filterTextLoweCase) === 0;
+            return value.indexOf(filterText) === 0;
         case TextFilter.ENDS_WITH:
-            var index = valueLowerCase.lastIndexOf(filterTextLoweCase);
-            return index >= 0 && index === (valueLowerCase.length - filterTextLoweCase.length);
+            let index = value.lastIndexOf(filterText);
+            return index >= 0 && index === (value.length - filterText.length);
         default:
             // should never happen
             console.warn('invalid filter type ' + filter);
@@ -46,9 +58,15 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
         }
     };
 
+    public getDefaultType(): string {
+        return BaseFilter.CONTAINS;
+    }
+
 
     public customInit(): void {
         this.comparator = this.filterParams.textCustomComparator ? this.filterParams.textCustomComparator : TextFilter.DEFAULT_COMPARATOR;
+        this.formatter = this.filterParams.textFormatter ? this.filterParams.textFormatter : TextFilter.DEFAULT_FORMATTER;
+        super.customInit();
     }
 
     modelFromFloatingFilter(from: string): SerializedTextFilter {
@@ -72,8 +90,10 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
     }
 
     public initialiseFilterBodyUi() {
-        this.addDestroyableEventListener(this.eFilterTextField, 'input', this.onFilterTextFieldChanged.bind(this));
-        this.setType(this.defaultFilter);
+        super.initialiseFilterBodyUi();
+        let debounceMs: number = this.filterParams.debounceMs != null ? this.filterParams.debounceMs : 500;
+        let toDebounce:()=>void = _.debounce(this.onFilterTextFieldChanged.bind(this), debounceMs);
+        this.addDestroyableEventListener(this.eFilterTextField, 'input', toDebounce);
     }
 
     public refreshFilterBodyUi() {}
@@ -90,7 +110,7 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
         if (!this.filterText) {
             return true;
         }
-        var value = this.filterParams.valueGetter(params.node);
+        let value = this.filterParams.valueGetter(params.node);
         if (!value) {
             if (this.filter === BaseFilter.NOT_EQUAL) {
                 // if there is no value, but the filter type was 'not equals',
@@ -103,11 +123,12 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
                 return false;
             }
         }
-        return this.comparator (this.filter, value, this.filterText);
+        let valueFormatted:string = this.formatter(value);
+        return this.comparator (this.filter, valueFormatted, this.filterText);
     }
 
     private onFilterTextFieldChanged() {
-        var filterText = _.makeNull(this.eFilterTextField.value);
+        let filterText = _.makeNull(this.eFilterTextField.value);
         if (filterText && filterText.trim() === '') {
             filterText = null;
         }
@@ -115,7 +136,7 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
         if (this.filterText !== filterText) {
             let newLowerCase = filterText ? filterText.toLowerCase() : null;
             let previousLowerCase = this.filterText ? this.filterText.toLowerCase() : null;
-            this.filterText = filterText;
+            this.filterText = this.formatter(filterText);
             if (previousLowerCase !== newLowerCase) {
                 this.onFilterChanged();
             }
@@ -126,7 +147,7 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
         filter = _.makeNull(filter);
 
         if (filter) {
-            this.filterText = filter;
+            this.filterText = this.formatter(filter);
             this.eFilterTextField.value = filter;
         } else {
             this.filterText = null;
@@ -145,7 +166,7 @@ export class TextFilter extends ComparableBaseFilter <string, ITextFilterParams,
 
     public serialize(): SerializedTextFilter{
         return {
-            type: this.filter,
+            type: this.filter ? this.filter : this.defaultFilter,
             filter: this.filterText,
             filterType: 'text'
         }

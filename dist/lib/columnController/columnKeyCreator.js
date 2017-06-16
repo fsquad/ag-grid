@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -20,7 +20,7 @@ var ColumnKeyCreator = (function () {
         colId = utils_1.Utils.toStringOrNull(colId);
         var count = 0;
         while (true) {
-            var idToTry;
+            var idToTry = void 0;
             if (colId) {
                 idToTry = colId;
                 if (count !== 0) {

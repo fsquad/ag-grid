@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -33,7 +33,18 @@ var RowNode = (function () {
     RowNode.prototype.setData = function (data) {
         var oldData = this.data;
         this.data = data;
-        var event = { oldData: oldData, newData: data };
+        var event = { oldData: oldData, newData: data, update: false };
+        this.dispatchLocalEvent(RowNode.EVENT_DATA_CHANGED, event);
+    };
+    // similar to setRowData, however it is expected that the data is the same data item. this
+    // is intended to be used with Redux type stores, where the whole data can be changed. we are
+    // guaranteed that the data is the same entity (so grid doesn't need to worry about the id of the
+    // underlying data changing, hence doesn't need to worry about selection). the grid, upon receiving
+    // dataChanged event, will refresh the cells rather than rip them all out (so user can show transitions).
+    RowNode.prototype.updateData = function (data) {
+        var oldData = this.data;
+        this.data = data;
+        var event = { oldData: oldData, newData: data, update: true };
         this.dispatchLocalEvent(RowNode.EVENT_DATA_CHANGED, event);
     };
     RowNode.prototype.createDaemonNode = function () {
@@ -78,15 +89,6 @@ var RowNode = (function () {
             this.id = id;
         }
     };
-    RowNode.prototype.setLoading = function (loading) {
-        if (this.loading === loading) {
-            return;
-        }
-        this.loading = loading;
-        if (this.eventService) {
-            this.eventService.dispatchEvent(RowNode.EVENT_LOADING_CHANGED);
-        }
-    };
     RowNode.prototype.clearRowTop = function () {
         this.oldRowTop = this.rowTop;
         this.setRowTop(null);
@@ -100,6 +102,15 @@ var RowNode = (function () {
             this.eventService.dispatchEvent(RowNode.EVENT_TOP_CHANGED);
         }
     };
+    RowNode.prototype.setAllChildrenCount = function (allChildrenCount) {
+        if (this.allChildrenCount === allChildrenCount) {
+            return;
+        }
+        this.allChildrenCount = allChildrenCount;
+        if (this.eventService) {
+            this.eventService.dispatchEvent(RowNode.EVENT_ALL_CHILDREN_COUNT_CELL_CHANGED);
+        }
+    };
     RowNode.prototype.setRowHeight = function (rowHeight) {
         this.rowHeight = rowHeight;
         if (this.eventService) {
@@ -110,6 +121,15 @@ var RowNode = (function () {
         this.rowIndex = rowIndex;
         if (this.eventService) {
             this.eventService.dispatchEvent(RowNode.EVENT_ROW_INDEX_CHANGED);
+        }
+    };
+    RowNode.prototype.setUiLevel = function (uiLevel) {
+        if (this.uiLevel === uiLevel) {
+            return;
+        }
+        this.uiLevel = uiLevel;
+        if (this.eventService) {
+            this.eventService.dispatchEvent(RowNode.EVENT_UI_LEVEL_CHANGED);
         }
     };
     RowNode.prototype.setExpanded = function (expanded) {
@@ -136,6 +156,24 @@ var RowNode = (function () {
     RowNode.prototype.setDataValue = function (colKey, newValue) {
         var column = this.columnController.getGridColumn(colKey);
         this.valueService.setValue(this, column, newValue);
+        this.dispatchCellChangedEvent(column, newValue);
+    };
+    // sets the data for an aggregation
+    RowNode.prototype.setAggData = function (newAggData) {
+        var _this = this;
+        // find out all keys that could potentially change
+        var colIds = utils_1.Utils.getAllKeysInObjects([this.data, newAggData]);
+        this.data = newAggData;
+        // if no event service, nobody has registered for events, so no need fire event
+        if (this.eventService) {
+            colIds.forEach(function (colId) {
+                var column = _this.columnController.getGridColumn(colId);
+                var value = _this.data ? _this.data[colId] : undefined;
+                _this.dispatchCellChangedEvent(column, value);
+            });
+        }
+    };
+    RowNode.prototype.dispatchCellChangedEvent = function (column, newValue) {
         var event = { column: column, newValue: newValue };
         this.dispatchLocalEvent(RowNode.EVENT_CELL_CHANGED, event);
     };
@@ -417,13 +455,14 @@ var RowNode = (function () {
 RowNode.EVENT_ROW_SELECTED = 'rowSelected';
 RowNode.EVENT_DATA_CHANGED = 'dataChanged';
 RowNode.EVENT_CELL_CHANGED = 'cellChanged';
+RowNode.EVENT_ALL_CHILDREN_COUNT_CELL_CHANGED = 'allChildrenCountChanged';
 RowNode.EVENT_MOUSE_ENTER = 'mouseEnter';
 RowNode.EVENT_MOUSE_LEAVE = 'mouseLeave';
 RowNode.EVENT_HEIGHT_CHANGED = 'heightChanged';
 RowNode.EVENT_TOP_CHANGED = 'topChanged';
 RowNode.EVENT_ROW_INDEX_CHANGED = 'rowIndexChanged';
 RowNode.EVENT_EXPANDED_CHANGED = 'expandedChanged';
-RowNode.EVENT_LOADING_CHANGED = 'loadingChanged';
+RowNode.EVENT_UI_LEVEL_CHANGED = 'uiLevelChanged';
 __decorate([
     context_1.Autowired('eventService'),
     __metadata("design:type", eventService_1.EventService)

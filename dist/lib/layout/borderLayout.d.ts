@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 export declare class BorderLayout {
@@ -19,7 +19,8 @@ export declare class BorderLayout {
     private eCenterChildLayout;
     private isLayoutPanel;
     private fullHeight;
-    private layoutActive;
+    private horizontalLayoutActive;
+    private verticalLayoutActive;
     private eGui;
     private id;
     private childPanels;

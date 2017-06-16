@@ -82,12 +82,13 @@ export abstract class BaseFilter<T, P extends IFilterParams, M> extends Componen
 
     public init(params: P): void {
         this.filterParams = params;
-        this.defaultFilter = BaseFilter.EQUALS;
+        this.defaultFilter = this.filterParams.defaultOption;
         if (this.filterParams.filterOptions){
             if (this.filterParams.filterOptions.lastIndexOf(BaseFilter.EQUALS)<0){
                 this.defaultFilter = this.filterParams.filterOptions[0];
             }
         }
+        this.customInit();
         this.filter = this.defaultFilter;
         this.clearActive = params.clearButton === true;
         //Allowing for old param property apply, even though is not advertised through the interface
@@ -112,9 +113,9 @@ export abstract class BaseFilter<T, P extends IFilterParams, M> extends Componen
 
 
         this.instantiate(this.context);
+
         this.initialiseFilterBodyUi();
         this.refreshFilterBodyUi();
-        this.customInit();
 
     }
 
@@ -174,7 +175,7 @@ export abstract class BaseFilter<T, P extends IFilterParams, M> extends Componen
         this.refreshFilterBodyUi();
     }
 
-    private doOnFilterChanged (applyNow:boolean = false):void{
+    private doOnFilterChanged (applyNow:boolean = false):boolean{
         this.filterParams.filterModifiedCallback();
         let requiresApplyAndIsApplying: boolean = this.applyActive && applyNow;
         let notRequiresApply: boolean = !this.applyActive;
@@ -184,17 +185,18 @@ export abstract class BaseFilter<T, P extends IFilterParams, M> extends Componen
             this.filterParams.filterChangedCallback();
         }
         this.refreshFilterBodyUi();
+        return shouldFilter;
     }
 
     public onFilterChanged ():void{
         this.doOnFilterChanged();
     }
 
-    public onFloatingFilterChanged (change:FloatingFilterChange):void{
+    public onFloatingFilterChanged (change:FloatingFilterChange):boolean{
         //It has to be of the type FloatingFilterWithApplyChange if it gets here
         let casted:BaseFloatingFilterChange<M> = <BaseFloatingFilterChange<M>>change;
         this.setModel(casted ? casted.model : null);
-        this.doOnFilterChanged(casted ? casted.apply : false);
+        return this.doOnFilterChanged(casted ? casted.apply : false);
     }
 
     public generateFilterHeader():string{
@@ -237,6 +239,12 @@ export abstract class ComparableBaseFilter<T, P extends IFilterParams, M> extend
         super.init(params);
         this.addDestroyableEventListener(this.eTypeSelector, "change", this.onFilterTypeChanged.bind(this));
     }
+
+    public customInit (){
+        if (!this.defaultFilter){
+            this.defaultFilter = this.getDefaultType();
+        }
+    }
     
     public generateFilterHeader(): string {
         let defaultFilterTypes = this.getApplicableFilterTypes();
@@ -258,6 +266,12 @@ export abstract class ComparableBaseFilter<T, P extends IFilterParams, M> extend
                 </select>
             </div>`;
     }
+
+    public initialiseFilterBodyUi() {
+        this.setFilterType(this.filter);
+    }
+
+    public abstract getDefaultType ():string;
 
     private onFilterTypeChanged (): void{
         this.filter = this.eTypeSelector.value;
@@ -292,10 +306,13 @@ export interface IScalarFilterParams extends IFilterParams{
 export abstract class ScalarBaseFilter<T, P extends IScalarFilterParams, M> extends ComparableBaseFilter<T, P, M>{
     public abstract comparator(): Comparator<T>;
 
-    public customInit():void{}
+
+    public getDefaultType(): string {
+        return BaseFilter.EQUALS;
+    }
 
     public doesFilterPass(params: IDoesFilterPassParams): boolean {
-        var value:any = this.filterParams.valueGetter(params.node);
+        let value:any = this.filterParams.valueGetter(params.node);
         let comparator: Comparator<T> = this.comparator();
 
         let rawFilterValues : T[] | T= this.filterValues();
@@ -313,11 +330,11 @@ export abstract class ScalarBaseFilter<T, P extends IScalarFilterParams, M> exte
         }
 
         if (this.filter === BaseFilter.GREATER_THAN_OR_EQUAL){
-            return compareResult >= 0;
+            return compareResult >= 0 && (value!=null);
         }
 
         if (this.filter === BaseFilter.LESS_THAN_OR_EQUAL){
-            return compareResult <= 0;
+            return compareResult <= 0 && (value!=null);
         }
 
         if (this.filter === BaseFilter.LESS_THAN){

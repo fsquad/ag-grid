@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { Column } from "../entities/column";
@@ -69,4 +69,6 @@ export interface IFilterParams {
     context: any;
     $scope: any;
     filterOptions?: string[];
+    defaultOption?: string;
+    textFormatter?: (from: string) => string;
 }

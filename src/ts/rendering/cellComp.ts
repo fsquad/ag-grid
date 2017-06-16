@@ -10,7 +10,7 @@ import {ValueService} from "../valueService";
 import {EventService} from "../eventService";
 import {Constants} from "../constants";
 import {Events, CellEvent} from "../events";
-import {RenderedRow} from "./renderedRow";
+import {RowComp} from "./rowComp";
 import {Autowired, PostConstruct, Optional, Context} from "../context/context";
 import {GridApi} from "../gridApi";
 import {FocusedCellController} from "../focusedCellController";
@@ -22,7 +22,7 @@ import {ICellEditorComp, ICellEditorParams} from "./cellEditors/iCellEditor";
 import {CellEditorFactory} from "./cellEditorFactory";
 import {Component} from "../widgets/component";
 import {PopupService} from "../widgets/popupService";
-import {ICellRenderer, ICellRendererFunc, ICellRendererComp, ICellRendererParams} from "./cellRenderers/iCellRenderer";
+import {ICellRendererFunc, ICellRendererComp, ICellRendererParams} from "./cellRenderers/iCellRenderer";
 import {CellRendererFactory} from "./cellRendererFactory";
 import {CellRendererService} from "./cellRendererService";
 import {ValueFormatterService} from "./valueFormatterService";
@@ -33,7 +33,7 @@ import {StylingService} from "../styling/stylingService";
 import {ColumnHoverService} from "./columnHoverService";
 import {ColumnAnimationService} from "./columnAnimationService";
 
-export class RenderedCell extends Component {
+export class CellComp extends Component {
 
     @Autowired('context') private context: Context;
     @Autowired('columnApi') private columnApi: ColumnApi;
@@ -61,12 +61,17 @@ export class RenderedCell extends Component {
 
     private static PRINTABLE_CHARACTERS = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890!"£$%^&*()_+-=[];\'#,./\|<>?:@~{}';
 
+    public static DOM_DATA_KEY_CELL_COMP = 'cellComp';
+
     private eGridCell: HTMLElement; // the outer cell
     private eSpanWithValue: HTMLElement; // inner cell
     private eCellWrapper: HTMLElement;
     private eParentOfValue: HTMLElement;
 
     private gridCell: GridCell; // this is a pojo, not a gui element
+
+    // how many ranges this cell is in, depends what color to mark this cell
+    private rangeCount = 0;
 
     // we do not use this in this class, however the renderedRow wants to konw this
     private eParentRow: HTMLElement;
@@ -87,12 +92,12 @@ export class RenderedCell extends Component {
 
     private value: any;
     private usingWrapper: boolean;
-    private renderedRow: RenderedRow;
+    private renderedRow: RowComp;
 
     private firstRightPinned = false;
     private lastLeftPinned = false;
 
-    constructor(column: Column, node: RowNode, scope: any, renderedRow: RenderedRow) {
+    constructor(column: Column, node: RowNode, scope: any, renderedRow: RowComp) {
         super('<div/>');
 
         // because we reference eGridCell everywhere in this class,
@@ -104,8 +109,6 @@ export class RenderedCell extends Component {
         this.node = node;
         this.scope = scope;
         this.renderedRow = renderedRow;
-
-        this.setupGridCell();
     }
 
     private createGridCell(): void {
@@ -117,18 +120,18 @@ export class RenderedCell extends Component {
         this.gridCell = new GridCell(gridCellDef);
     }
 
-    private setupGridCell(): void {
-        var listener = () => {
-            // when index changes, this influences items that need the index, so we update the
-            // grid cell so they are working off the new index.
-            this.createGridCell();
-            // when the index of the row changes, ie means the cell may have lost of gained focus
-            this.checkCellFocused();
-        };
+    private addIndexChangeListener(): void {
+        this.addDestroyableEventListener(this.node, RowNode.EVENT_ROW_INDEX_CHANGED, this.onRowIndexChanged.bind(this));
+    }
 
-        this.addDestroyableEventListener(this.node, RowNode.EVENT_ROW_INDEX_CHANGED, listener);
-
+    private onRowIndexChanged(): void {
+        // when index changes, this influences items that need the index, so we update the
+        // grid cell so they are working off the new index.
         this.createGridCell();
+        // when the index of the row changes, ie means the cell may have lost of gained focus
+        this.checkCellFocused();
+        // check range selection
+        this.onRangeSelectionChanged();
     }
 
     public getGridCell(): GridCell {
@@ -164,7 +167,7 @@ export class RenderedCell extends Component {
     }
 
     private setPinnedClasses(): void {
-        var firstPinnedChangedListener = () => {
+        let firstPinnedChangedListener = () => {
             if (this.firstRightPinned !== this.column.isFirstRightPinned()) {
                 this.firstRightPinned = this.column.isFirstRightPinned();
                 _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-first-right-pinned', this.firstRightPinned);
@@ -211,7 +214,7 @@ export class RenderedCell extends Component {
     }
 
     private getValue(): any {
-        var data = this.getDataForRow();
+        let data = this.getDataForRow();
         return this.valueService.getValueUsingSpecificData(this.column, data, this.node);
     }
 
@@ -221,8 +224,8 @@ export class RenderedCell extends Component {
             return this.node.data;
         } else if (this.node.group) {
             // if header and header is expanded, we show data in footer only
-            var footersEnabled = this.gridOptionsWrapper.isGroupIncludeFooter();
-            var suppressHideHeader = this.gridOptionsWrapper.isGroupSuppressBlankHeader();
+            let footersEnabled = this.gridOptionsWrapper.isGroupIncludeFooter();
+            let suppressHideHeader = this.gridOptionsWrapper.isGroupSuppressBlankHeader();
             if (this.node.expanded && footersEnabled && !suppressHideHeader) {
                 return undefined;
             } else {
@@ -238,24 +241,23 @@ export class RenderedCell extends Component {
         if (!this.rangeController) {
             return;
         }
-        var rangeCountLastTime: number = 0;
-        var rangeSelectedListener = () => {
+        this.addDestroyableEventListener(this.eventService, Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this))
+        this.onRangeSelectionChanged();
+    }
 
-            var rangeCount = this.rangeController.getCellRangeCount(this.gridCell);
-            if (rangeCountLastTime !== rangeCount) {
-                _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected', rangeCount!==0);
-                _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-1', rangeCount===1);
-                _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-2', rangeCount===2);
-                _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-3', rangeCount===3);
-                _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-4', rangeCount>=4);
-                rangeCountLastTime = rangeCount;
-            }
-        };
-        this.eventService.addEventListener(Events.EVENT_RANGE_SELECTION_CHANGED, rangeSelectedListener);
-        this.addDestroyFunc( ()=> {
-            this.eventService.removeEventListener(Events.EVENT_RANGE_SELECTION_CHANGED, rangeSelectedListener);
-        });
-        rangeSelectedListener();
+    private onRangeSelectionChanged(): void {
+        let usingAgGridFree = !this.rangeController;
+        if (usingAgGridFree) { return; }
+
+        let newRangeCount = this.rangeController.getCellRangeCount(this.gridCell);
+        if (this.rangeCount !== newRangeCount) {
+            _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected', newRangeCount!==0);
+            _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-1', newRangeCount===1);
+            _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-2', newRangeCount===2);
+            _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-3', newRangeCount===3);
+            _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-range-selected-4', newRangeCount>=4);
+            this.rangeCount = newRangeCount;
+        }
     }
 
     private addHighlightListener(): void {
@@ -263,9 +265,9 @@ export class RenderedCell extends Component {
             return;
         }
 
-        var clipboardListener = (event: any) => {
-            var cellId = this.gridCell.createId();
-            var shouldFlash = event.cells[cellId];
+        let clipboardListener = (event: any) => {
+            let cellId = this.gridCell.createId();
+            let shouldFlash = event.cells[cellId];
             if (shouldFlash) {
                 this.animateCellWithHighlight();
             }
@@ -277,7 +279,7 @@ export class RenderedCell extends Component {
     }
 
     private addChangeListener(): void {
-        var cellChangeListener = (event: any) => {
+        let cellChangeListener = (event: any) => {
             if (event.column === this.column) {
                 this.refreshCell();
                 this.animateCellWithDataChanged();
@@ -297,8 +299,8 @@ export class RenderedCell extends Component {
     }
 
     private animateCell(cssName: string): void {
-        var fullName = 'ag-cell-' + cssName;
-        var animationFullName = 'ag-cell-' + cssName + '-animation';
+        let fullName = 'ag-cell-' + cssName;
+        let animationFullName = 'ag-cell-' + cssName + '-animation';
         // we want to highlight the cells, without any animation
         _.addCssClass(this.eGridCell, fullName);
         _.removeCssClass(this.eGridCell, animationFullName);
@@ -314,7 +316,7 @@ export class RenderedCell extends Component {
     }
 
     private addCellFocusedListener(): void {
-        var cellFocusedListener = this.checkCellFocused.bind(this);
+        let cellFocusedListener = this.checkCellFocused.bind(this);
 
         this.eventService.addEventListener(Events.EVENT_CELL_FOCUSED, cellFocusedListener);
         this.addDestroyFunc( ()=> {
@@ -324,7 +326,7 @@ export class RenderedCell extends Component {
     }
 
     private checkCellFocused(event?: any): void {
-        var cellFocused = this.focusedCellController.isCellFocused(this.gridCell);
+        let cellFocused = this.focusedCellController.isCellFocused(this.gridCell);
 
         // see if we need to change the classes on this cell
         if (cellFocused !== this.cellFocused) {
@@ -340,14 +342,14 @@ export class RenderedCell extends Component {
         }
 
         // if another cell was focused, and we are editing, then stop editing
-        var fullRowEdit = this.gridOptionsWrapper.isFullRowEdit();
+        let fullRowEdit = this.gridOptionsWrapper.isFullRowEdit();
         if (!cellFocused && !fullRowEdit && this.editingCell) {
             this.stopRowOrCellEdit();
         }
     }
 
     private setWidthOnCell(): void {
-        var widthChangedListener = () => {
+        let widthChangedListener = () => {
             this.eGridCell.style.width = this.column.getActualWidth() + "px";
         };
 
@@ -362,6 +364,9 @@ export class RenderedCell extends Component {
     @PostConstruct
     public init(): void {
         this.value = this.getValue();
+
+        this.createGridCell();
+        this.addIndexChangeListener();
 
         this.setupCheckboxSelection();
 
@@ -396,17 +401,15 @@ export class RenderedCell extends Component {
     }
 
     private onColumnHover(): void {
-        var isHovered = this.columnHoverService.isHovered(this.column);
+        let isHovered = this.columnHoverService.isHovered(this.column);
         _.addOrRemoveCssClass(this.getGui(), 'ag-column-hover', isHovered)
     }
 
     private addDomData(): void {
-        var domDataKey = this.gridOptionsWrapper.getDomDataKey();
-        var gridCellNoType = <any>this.eGridCell;
-        gridCellNoType[domDataKey] = {
-            renderedCell: this
-        };
-        this.addDestroyFunc( ()=> gridCellNoType[domDataKey] = null );
+        this.gridOptionsWrapper.setDomData(this.eGridCell, CellComp.DOM_DATA_KEY_CELL_COMP, this);
+        this.addDestroyFunc( ()=>
+            this.gridOptionsWrapper.setDomData(this.eGridCell, CellComp.DOM_DATA_KEY_CELL_COMP, null)
+        );
     }
 
     private onEnterKeyDown(): void {
@@ -468,7 +471,7 @@ export class RenderedCell extends Component {
 
     private onSpaceKeyPressed(event: KeyboardEvent): void {
         if (!this.editingCell && this.gridOptionsWrapper.isRowSelection()) {
-            var selected = this.node.isSelected();
+            let selected = this.node.isSelected();
             this.node.setSelected(!selected);
         }
         // prevent default as space key, by default, moves browser scroll down
@@ -487,16 +490,16 @@ export class RenderedCell extends Component {
     public onKeyPress(event: KeyboardEvent): void {
         // check this, in case focus is on a (for example) a text field inside the cell,
         // in which cse we should not be listening for these key pressed
-        var eventTarget = _.getTarget(event);
-        var eventOnChildComponent = eventTarget!==this.getGui();
+        let eventTarget = _.getTarget(event);
+        let eventOnChildComponent = eventTarget!==this.getGui();
         if (eventOnChildComponent) { return; }
 
         if (!this.editingCell) {
-            var pressedChar = String.fromCharCode(event.charCode);
+            let pressedChar = String.fromCharCode(event.charCode);
             if (pressedChar === ' ') {
                 this.onSpaceKeyPressed(event);
             } else {
-                if (RenderedCell.PRINTABLE_CHARACTERS.indexOf(pressedChar)>=0) {
+                if (CellComp.PRINTABLE_CHARACTERS.indexOf(pressedChar)>=0) {
                     this.startRowOrCellEdit(null, pressedChar);
                     // if we don't prevent default, then the keypress also gets applied to the text field
                     // (at least when doing the default editor), but we need to allow the editor to decide
@@ -510,7 +513,7 @@ export class RenderedCell extends Component {
     }
 
     public onKeyDown(event: KeyboardEvent): void {
-        var key = event.which || event.keyCode;
+        let key = event.which || event.keyCode;
 
         switch (key) {
             case Constants.KEY_ENTER:
@@ -539,7 +542,7 @@ export class RenderedCell extends Component {
     }
 
     private createCellEditorParams(keyPress: number, charPress: string, cellStartedEdit: boolean): ICellEditorParams {
-        var params: ICellEditorParams = {
+        let params: ICellEditorParams = {
             value: this.getValue(),
             keyPress: keyPress,
             charPress: charPress,
@@ -556,7 +559,7 @@ export class RenderedCell extends Component {
             eGridCell: this.eGridCell
         };
 
-        var colDef = this.column.getColDef();
+        let colDef = this.column.getColDef();
         if (colDef.cellEditorParams) {
             _.assign(params, colDef.cellEditorParams);
         }
@@ -566,9 +569,9 @@ export class RenderedCell extends Component {
 
     private createCellEditor(keyPress: number, charPress: string, cellStartedEdit: boolean): ICellEditorComp {
 
-        var params = this.createCellEditorParams(keyPress, charPress, cellStartedEdit);
+        let params = this.createCellEditorParams(keyPress, charPress, cellStartedEdit);
 
-        var cellEditor = this.cellEditorFactory.createCellEditor(this.column.getCellEditor(), params);
+        let cellEditor = this.cellEditorFactory.createCellEditor(this.column.getCellEditor(), params);
 
         return cellEditor;
     }
@@ -598,7 +601,7 @@ export class RenderedCell extends Component {
         // don't do it if already editing
         if (this.editingCell) { return; }
 
-        var cellEditor = this.createCellEditor(keyPress, charPress, cellStartedEdit);
+        let cellEditor = this.createCellEditor(keyPress, charPress, cellStartedEdit);
         if (cellEditor.isCancelBeforeStart && cellEditor.isCancelBeforeStart()) {
             if (cellEditor.destroy) {
                 cellEditor.destroy();
@@ -648,7 +651,7 @@ export class RenderedCell extends Component {
     }
 
     private addPopupCellEditor(): void {
-        var ePopupGui = this.cellEditor.getGui();
+        let ePopupGui = this.cellEditor.getGui();
 
         this.hideEditorPopup = this.popupService.addAsModalPopup(
             ePopupGui,
@@ -660,6 +663,9 @@ export class RenderedCell extends Component {
         );
 
         this.popupService.positionPopupOverComponent({
+            column: this.column,
+            rowNode: this.node,
+            type: 'popupCellEditor',
             eventSource: this.eGridCell,
             ePopup: ePopupGui,
             keepWithinBounds: true
@@ -694,9 +700,9 @@ export class RenderedCell extends Component {
             // also have another option here to cancel after editing, so for example user could have a popup editor and
             // it is closed by user clicking outside the editor. then the editor will close automatically (with false
             // passed above) and we need to see if the editor wants to accept the new value.
-            var userWantsToCancel = this.cellEditor.isCancelAfterEnd && this.cellEditor.isCancelAfterEnd();
+            let userWantsToCancel = this.cellEditor.isCancelAfterEnd && this.cellEditor.isCancelAfterEnd();
             if (!userWantsToCancel) {
-                var newValue = this.cellEditor.getValue();
+                let newValue = this.cellEditor.getValue();
                 this.valueService.setValue(this.node, this.column, newValue);
                 this.value = this.getValue();
             }
@@ -733,7 +739,7 @@ export class RenderedCell extends Component {
     }
 
     private createParams(): any {
-        var params = {
+        let params = {
             node: this.node,
             data: this.node.data,
             value: this.value,
@@ -749,12 +755,12 @@ export class RenderedCell extends Component {
     }
 
     private createEvent(event: any): CellEvent {
-        var agEvent = this.createParams();
+        let agEvent = this.createParams();
         agEvent.event = event;
         return agEvent;
     }
 
-    public getRenderedRow(): RenderedRow {
+    public getRenderedRow(): RowComp {
         return this.renderedRow;
     }
 
@@ -784,12 +790,12 @@ export class RenderedCell extends Component {
     }
 
     private onMouseOut(mouseEvent: MouseEvent): void {
-        var agEvent = this.createEvent(mouseEvent);
+        let agEvent = this.createEvent(mouseEvent);
         this.eventService.dispatchEvent(Events.EVENT_CELL_MOUSE_OUT, agEvent);
     }
 
     private onMouseOver(mouseEvent: MouseEvent): void {
-        var agEvent = this.createEvent(mouseEvent);
+        let agEvent = this.createEvent(mouseEvent);
         this.eventService.dispatchEvent(Events.EVENT_CELL_MOUSE_OVER, agEvent);
     }
 
@@ -805,8 +811,8 @@ export class RenderedCell extends Component {
         }
 
 
-        var colDef = this.column.getColDef();
-        var agEvent: any = this.createEvent(mouseEvent);
+        let colDef = this.column.getColDef();
+        let agEvent: any = this.createEvent(mouseEvent);
         this.eventService.dispatchEvent(Events.EVENT_CELL_CONTEXT_MENU, agEvent);
 
         if (colDef.onCellContextMenu) {
@@ -820,9 +826,9 @@ export class RenderedCell extends Component {
     }
 
     private onCellDoubleClicked(mouseEvent: MouseEvent) {
-        var colDef = this.column.getColDef();
+        let colDef = this.column.getColDef();
         // always dispatch event to eventService
-        var agEvent: any = this.createEvent(mouseEvent);
+        let agEvent: any = this.createEvent(mouseEvent);
         this.eventService.dispatchEvent(Events.EVENT_CELL_DOUBLE_CLICKED, agEvent);
 
         // check if colDef also wants to handle event
@@ -850,8 +856,8 @@ export class RenderedCell extends Component {
         // don't change the range, however if the cell is not in a range,
         // we set a new range
         if (this.rangeController) {
-            var thisCell = this.gridCell;
-            var cellAlreadyInRange = this.rangeController.isCellInAnyRange(thisCell);
+            let thisCell = this.gridCell;
+            let cellAlreadyInRange = this.rangeController.isCellInAnyRange(thisCell);
             if (!cellAlreadyInRange) {
                 this.rangeController.setRangeToCell(thisCell);
             }
@@ -859,10 +865,10 @@ export class RenderedCell extends Component {
     }
 
     private onCellClicked(mouseEvent: MouseEvent): void {
-        var agEvent = this.createEvent(mouseEvent);
+        let agEvent = this.createEvent(mouseEvent);
         this.eventService.dispatchEvent(Events.EVENT_CELL_CLICKED, agEvent);
 
-        var colDef = this.column.getColDef();
+        let colDef = this.column.getColDef();
 
         if (colDef.onCellClicked) {
             colDef.onCellClicked(agEvent);
@@ -893,7 +899,7 @@ export class RenderedCell extends Component {
     // if we are editing inline, then we don't have the padding in the cell (set in the themes)
     // to allow the text editor full access to the entire cell
     private setInlineEditingClass(): void {
-        var editingInline = this.editingCell && !this.cellEditorInPopup;
+        let editingInline = this.editingCell && !this.cellEditorInPopup;
         _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-inline-editing', editingInline);
         _.addOrRemoveCssClass(this.eGridCell, 'ag-cell-not-inline-editing', !editingInline);
     }
@@ -908,11 +914,11 @@ export class RenderedCell extends Component {
     }
 
     private addStylesFromColDef() {
-        var colDef = this.column.getColDef();
+        let colDef = this.column.getColDef();
         if (colDef.cellStyle) {
-            var cssToUse: any;
+            let cssToUse: any;
             if (typeof colDef.cellStyle === 'function') {
-                var cellStyleParams = {
+                let cellStyleParams = {
                     value: this.value,
                     data: this.node.data,
                     node: this.node,
@@ -922,7 +928,7 @@ export class RenderedCell extends Component {
                     context: this.gridOptionsWrapper.getContext(),
                     api: this.gridOptionsWrapper.getApi()
               };
-                var cellStyleFunc = <Function>colDef.cellStyle;
+                let cellStyleFunc = <Function>colDef.cellStyle;
                 cssToUse = cellStyleFunc(cellStyleParams);
             } else {
                 cssToUse = colDef.cellStyle;
@@ -959,7 +965,7 @@ export class RenderedCell extends Component {
             _.addCssClass(this.eCellWrapper, 'ag-cell-wrapper');
             this.eGridCell.appendChild(this.eCellWrapper);
 
-            var cbSelectionComponent = new CheckboxSelectionComponent();
+            let cbSelectionComponent = new CheckboxSelectionComponent();
             this.context.wireBean(cbSelectionComponent);
 
             let visibleFunc = this.column.getColDef().checkboxSelection;
@@ -990,13 +996,13 @@ export class RenderedCell extends Component {
 
         this.value = this.getValue();
 
-        var refreshFailed = false;
-        var that = this;
+        let refreshFailed = false;
+        let that = this;
 
         // if it's 'new data', then we don't refresh the cellRenderer, even if refresh method is available.
         // this is because if the whole data is new (ie we are showing stock price 'BBA' now and not 'SSD')
         // then we are not showing a movement in the stock price, rather we are showing different stock.
-        var attemptRefresh = !newData && this.cellRenderer && this.cellRenderer.refresh;
+        let attemptRefresh = !newData && this.cellRenderer && this.cellRenderer.refresh;
 
         if (attemptRefresh) {
             try {
@@ -1027,9 +1033,9 @@ export class RenderedCell extends Component {
         function doRefresh(): void {
             // if the cell renderer has a refresh method, we call this instead of doing a refresh
             // note: should pass in params here instead of value?? so that client has formattedValue
-            var valueFormatted = that.formatValue(that.value);
-            var cellRendererParams = that.column.getColDef().cellRendererParams;
-            var params = that.createRendererAndRefreshParams(valueFormatted, cellRendererParams);
+            let valueFormatted = that.formatValue(that.value);
+            let cellRendererParams = that.column.getColDef().cellRendererParams;
+            let params = that.createRendererAndRefreshParams(valueFormatted, cellRendererParams);
             that.cellRenderer.refresh(params);
         }
 
@@ -1075,12 +1081,12 @@ export class RenderedCell extends Component {
 
     private putDataIntoCell() {
         // template gets preference, then cellRenderer, then do it ourselves
-        var colDef = this.column.getColDef();
+        let colDef = this.column.getColDef();
 
-        var cellRenderer = this.column.getCellRenderer();
-        var floatingCellRenderer = this.column.getFloatingCellRenderer();
+        let cellRenderer = this.column.getCellRenderer();
+        let floatingCellRenderer = this.column.getFloatingCellRenderer();
 
-        var valueFormatted = this.valueFormatterService.formatValue(this.column, this.node, this.scope, this.gridCell.rowIndex, this.value);
+        let valueFormatted = this.valueFormatterService.formatValue(this.column, this.node, this.scope, this.gridCell.rowIndex, this.value);
 
         if (colDef.template) {
             // template is really only used for angular 1 - as people using ng1 are used to providing templates with
@@ -1090,7 +1096,7 @@ export class RenderedCell extends Component {
             // likewise for templateUrl - it's for ng1 really - when we move away from ng1, we can take these out.
             // niall was pro angular 1 when writing template and templateUrl, if writing from scratch now, would
             // not do these, but would follow a pattern that was friendly towards components, not templates.
-            var template = this.templateService.getTemplate(colDef.templateUrl, this.refreshCell.bind(this, true));
+            let template = this.templateService.getTemplate(colDef.templateUrl, this.refreshCell.bind(this, true));
             if (template) {
                 this.eParentOfValue.innerHTML = template;
             }
@@ -1103,8 +1109,8 @@ export class RenderedCell extends Component {
             this.useCellRenderer(cellRenderer, colDef.cellRendererParams, valueFormatted);
         } else {
             // if we insert undefined, then it displays as the string 'undefined', ugly!
-            var valueFormattedExits = valueFormatted !== null && valueFormatted !== undefined;
-            var valueToRender = valueFormattedExits ? valueFormatted : this.value;
+            let valueFormattedExits = valueFormatted !== null && valueFormatted !== undefined;
+            let valueToRender = valueFormattedExits ? valueFormatted : this.value;
             if (_.exists(valueToRender) && valueToRender !== '') {
                 // not using innerHTML to prevent injection of HTML
                 // https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#Security_considerations
@@ -1112,9 +1118,9 @@ export class RenderedCell extends Component {
             }
         }
         if (colDef.tooltipField) {
-            var data = this.getDataForRow();
+            let data = this.getDataForRow();
             if (_.exists(data)) {
-                var tooltip = _.getValueUsingField(data, colDef.tooltipField, this.column.isTooltipFieldContainsDots());
+                let tooltip = _.getValueUsingField(data, colDef.tooltipField, this.column.isTooltipFieldContainsDots());
                 if (_.exists(tooltip)) {
                         this.eParentOfValue.setAttribute('title', tooltip);
                 }
@@ -1127,7 +1133,7 @@ export class RenderedCell extends Component {
     }
 
     private createRendererAndRefreshParams(valueFormatted: string, cellRendererParams: {}): ICellRendererParams {
-        var params = <ICellRendererParams> {
+        let params = <ICellRendererParams> {
             value: this.value,
             valueFormatted: valueFormatted,
             valueGetter: this.getValue,
@@ -1156,7 +1162,7 @@ export class RenderedCell extends Component {
 
     private useCellRenderer(cellRendererKey: {new(): ICellRendererComp} | ICellRendererFunc | string, cellRendererParams: {}, valueFormatted: string): void {
 
-        var params = this.createRendererAndRefreshParams(valueFormatted, cellRendererParams);
+        let params = this.createRendererAndRefreshParams(valueFormatted, cellRendererParams);
 
         this.cellRenderer = this.cellRendererService.useCellRenderer(cellRendererKey, this.eParentOfValue, params);
     }

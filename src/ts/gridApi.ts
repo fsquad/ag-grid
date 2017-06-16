@@ -22,7 +22,6 @@ import {FocusedCellController} from "./focusedCellController";
 import {AddRangeSelectionParams, IRangeController, RangeSelection} from "./interfaces/iRangeController";
 import {GridCell, GridCellDef} from "./entities/gridCell";
 import {IClipboardService} from "./interfaces/iClipboardService";
-import {IInMemoryRowModel} from "./interfaces/iInMemoryRowModel";
 import {Utils as _} from "./utils";
 import {IViewportDatasource} from "./interfaces/iViewportDatasource";
 import {IMenuFactory} from "./interfaces/iMenuFactory";
@@ -33,10 +32,12 @@ import {IAggFuncService} from "./interfaces/iAggFuncService";
 import {IFilterComp} from "./interfaces/iFilter";
 import {CsvExportParams} from "./exportParams";
 import {ExcelExportParams, IExcelCreator} from "./interfaces/iExcelCreator";
-import {IPaginationService, ServerPaginationService} from "./rowModels/pagination/serverPaginationService";
 import {IDatasource} from "./rowModels/iDatasource";
 import {IEnterpriseDatasource} from "./interfaces/iEnterpriseDatasource";
 import {PaginationProxy} from "./rowModels/paginationProxy";
+import {IEnterpriseRowModel} from "./interfaces/iEnterpriseRowModel";
+import {InMemoryRowModel, RefreshModelParams, RowDataTransaction} from "./rowModels/inMemory/inMemoryRowModel";
+import {ImmutableService} from "./rowModels/inMemory/immutableService";
 
 
 export interface StartEditingCellParams {
@@ -49,6 +50,7 @@ export interface StartEditingCellParams {
 @Bean('gridApi')
 export class GridApi {
 
+    @Autowired('immutableService') private immutableService: ImmutableService;
     @Autowired('csvCreator') private csvCreator: CsvCreator;
     @Optional('excelCreator') private excelCreator: IExcelCreator;
     @Autowired('gridCore') private gridCore: GridCore;
@@ -66,7 +68,6 @@ export class GridApi {
     @Autowired('context') private context: Context;
     @Autowired('rowModel') private rowModel: IRowModel;
     @Autowired('sortController') private sortController: SortController;
-    @Autowired('serverPaginationService') private serverPaginationService: ServerPaginationService;
     @Autowired('paginationProxy') private paginationProxy: PaginationProxy;
     @Autowired('focusedCellController') private focusedCellController: FocusedCellController;
     @Optional('rangeController') private rangeController: IRangeController;
@@ -76,27 +77,22 @@ export class GridApi {
     @Autowired('cellRendererFactory') private cellRendererFactory: CellRendererFactory;
     @Autowired('cellEditorFactory') private cellEditorFactory: CellEditorFactory;
 
-    private inMemoryRowModel: IInMemoryRowModel;
+    private inMemoryRowModel: InMemoryRowModel;
     private infinitePageRowModel: InfiniteRowModel;
-    private paginationService: IPaginationService;
+    private enterpriseRowModel: IEnterpriseRowModel;
 
     @PostConstruct
     private init(): void {
         switch (this.rowModel.getType()) {
             case Constants.ROW_MODEL_TYPE_NORMAL:
-            case Constants.ROW_MODEL_TYPE_PAGINATION:
-                this.inMemoryRowModel = <IInMemoryRowModel> this.rowModel;
+                this.inMemoryRowModel = <InMemoryRowModel> this.rowModel;
                 break;
             case Constants.ROW_MODEL_TYPE_INFINITE:
-            case Constants.ROW_MODEL_TYPE_VIRTUAL_DEPRECATED:
                 this.infinitePageRowModel = <InfiniteRowModel> this.rowModel;
                 break;
-        }
-
-        if (this.gridOptionsWrapper.isPagination()) {
-            this.paginationService = this.paginationProxy;
-        } else {
-            this.paginationService = this.serverPaginationService;
+            case Constants.ROW_MODEL_TYPE_ENTERPRISE:
+                this.enterpriseRowModel = <IEnterpriseRowModel> this.rowModel;
+                break;
         }
     }
 
@@ -141,9 +137,7 @@ export class GridApi {
     }
 
     public setDatasource(datasource: IDatasource) {
-        if (this.gridOptionsWrapper.isRowModelServerPagination()) {
-            this.serverPaginationService.setDatasource(datasource);
-        } else if (this.gridOptionsWrapper.isRowModelInfinite()) {
+        if (this.gridOptionsWrapper.isRowModelInfinite()) {
             (<InfiniteRowModel>this.rowModel).setDatasource(datasource);
         } else {
             console.warn(`ag-Grid: you can only use a datasource when gridOptions.rowModelType is '${Constants.ROW_MODEL_TYPE_INFINITE}'`)
@@ -163,8 +157,13 @@ export class GridApi {
 
     public setRowData(rowData: any[]) {
         if (this.gridOptionsWrapper.isRowModelDefault()) {
-            this.selectionController.reset();
-            this.inMemoryRowModel.setRowData(rowData, true);
+            if (this.gridOptionsWrapper.isDeltaRowDataMode()) {
+                let transaction = this.immutableService.createTransactionForRowData(rowData);
+                this.inMemoryRowModel.updateRowData(transaction);
+            } else {
+                this.selectionController.reset();
+                this.inMemoryRowModel.setRowData(rowData, true);
+            }
         } else {
             console.log('cannot call setRowData unless using normal row model');
         }
@@ -262,9 +261,40 @@ export class GridApi {
         this.inMemoryRowModel.refreshModel({step: Constants.STEP_MAP});
     }
 
-    public refreshInMemoryRowModel(): any {
+    public refreshInMemoryRowModel(step?: string): any {
         if (_.missing(this.inMemoryRowModel)) { console.log('cannot call refreshInMemoryRowModel unless using normal row model') }
-        this.inMemoryRowModel.refreshModel({step: Constants.STEP_EVERYTHING});
+
+        let paramsStep = Constants.STEP_EVERYTHING;
+        let stepsMapped: any = {
+            group: Constants.STEP_EVERYTHING,
+            filter: Constants.STEP_FILTER,
+            map: Constants.STEP_MAP,
+            aggregate: Constants.STEP_AGGREGATE,
+            sort: Constants.STEP_SORT,
+            pivot: Constants.STEP_PIVOT
+        };
+
+        if (_.exists(step)) {
+            paramsStep = stepsMapped[step];
+        }
+        if (_.missing(paramsStep)) {
+            console.error(`ag-Grid: invalid step ${step}, available steps are ${Object.keys(stepsMapped).join(', ')}`);
+            return;
+        }
+
+        let modelParams: RefreshModelParams = {
+            step: paramsStep,
+            keepRenderedRows: true,
+            animate: true,
+            keepEditingRows: true
+        };
+
+        this.inMemoryRowModel.refreshModel(modelParams);
+    }
+
+    public getRowNode(id: string): RowNode {
+        if (_.missing(this.inMemoryRowModel)) { console.log('cannot call getRowNode unless using normal row model') }
+        return this.inMemoryRowModel.getRowNode(id);
     }
 
     public expandAll() {
@@ -441,7 +471,7 @@ export class GridApi {
     }
 
     public getFilterInstance(key: string|Column|ColDef): IFilterComp {
-        var column = this.columnController.getPrimaryColumn(key);
+        let column = this.columnController.getPrimaryColumn(key);
         if (column) {
             return this.filterManager.getFilterComponent(column);
         }
@@ -453,14 +483,14 @@ export class GridApi {
     }
 
     public destroyFilter(key: string|Column|ColDef) {
-        var column = this.columnController.getPrimaryColumn(key);
+        let column = this.columnController.getPrimaryColumn(key);
         if (column) {
             return this.filterManager.destroyFilter(column);
         }
     }
 
     public getColumnDef(key: string|Column|ColDef) {
-        var column = this.columnController.getPrimaryColumn(key);
+        let column = this.columnController.getPrimaryColumn(key);
         if (column) {
             return column.getColDef();
         } else {
@@ -506,6 +536,27 @@ export class GridApi {
 
     public setHeaderHeight(headerHeight: number) {
         this.gridOptionsWrapper.setProperty(GridOptionsWrapper.PROP_HEADER_HEIGHT, headerHeight);
+        this.doLayout();
+    }
+
+    public setGroupHeaderHeight(headerHeight: number) {
+        this.gridOptionsWrapper.setProperty(GridOptionsWrapper.PROP_GROUP_HEADER_HEIGHT, headerHeight);
+        this.doLayout();
+    }
+
+    public setFloatingFiltersHeight(headerHeight: number) {
+        this.gridOptionsWrapper.setProperty(GridOptionsWrapper.PROP_FLOATING_FILTERS_HEIGHT, headerHeight);
+        this.doLayout();
+    }
+
+    public setPivotGroupHeaderHeight(headerHeight: number) {
+        this.gridOptionsWrapper.setProperty(GridOptionsWrapper.PROP_PIVOT_GROUP_HEADER_HEIGHT, headerHeight);
+        this.doLayout();
+    }
+
+    public setPivotHeaderHeight(headerHeight: number) {
+        this.gridOptionsWrapper.setProperty(GridOptionsWrapper.PROP_PIVOT_HEADER_HEIGHT, headerHeight);
+        this.doLayout();
     }
 
     public showToolPanel(show:any) {
@@ -526,6 +577,10 @@ export class GridApi {
         }
     }
 
+    public setGroupRemoveSingleChildren(value: boolean) {
+        this.gridOptionsWrapper.setProperty(GridOptionsWrapper.PROP_GROUP_REMOVE_SINGLE_CHILDREN, value);
+    }
+
     public onRowHeightChanged() {
         if (_.exists(this.inMemoryRowModel)) {
             this.inMemoryRowModel.onRowHeightChanged();
@@ -533,7 +588,7 @@ export class GridApi {
     }
 
     public getValue(colKey: string|ColDef|Column, rowNode: RowNode): any {
-        var column = this.columnController.getPrimaryColumn(colKey);
+        let column = this.columnController.getPrimaryColumn(colKey);
         if (_.missing(column)) {
             column = this.columnController.getGridColumn(colKey);
         }
@@ -545,11 +600,13 @@ export class GridApi {
     }
 
     public addEventListener(eventType: string, listener: Function): void {
-        this.eventService.addEventListener(eventType, listener);
+        let async = this.gridOptionsWrapper.useAsyncEvents();
+        this.eventService.addEventListener(eventType, listener, async);
     }
 
     public addGlobalListener(listener: Function): void {
-        this.eventService.addGlobalListener(listener);
+        let async = this.gridOptionsWrapper.useAsyncEvents();
+        this.eventService.addGlobalListener(listener, async);
     }
 
     public removeEventListener(eventType: string, listener: Function): void {
@@ -607,12 +664,12 @@ export class GridApi {
     }
 
     public showColumnMenuAfterButtonClick(colKey: string|Column|ColDef, buttonElement: HTMLElement): void {
-        var column = this.columnController.getPrimaryColumn(colKey);
+        let column = this.columnController.getPrimaryColumn(colKey);
         this.menuFactory.showMenuAfterButtonClick(column, buttonElement);
     }
 
     public showColumnMenuAfterMouseClick(colKey: string|Column|ColDef, mouseEvent: MouseEvent|Touch): void {
-        var column = this.columnController.getPrimaryColumn(colKey);
+        let column = this.columnController.getPrimaryColumn(colKey);
         this.menuFactory.showMenuAfterMouseEvent(column, mouseEvent);
     }
 
@@ -629,13 +686,13 @@ export class GridApi {
     }
 
     public startEditingCell(params: StartEditingCellParams): void {
-        var column = this.columnController.getGridColumn(params.colKey);
+        let column = this.columnController.getGridColumn(params.colKey);
         if (!column) {
             console.warn(`ag-Grid: no column found for ${params.colKey}`);
             return;
         }
         let gridCellDef = <GridCellDef> {rowIndex: params.rowIndex, floating: null, column: column};
-        var gridCell = new GridCell(gridCellDef);
+        let gridCell = new GridCell(gridCellDef);
         this.gridPanel.ensureIndexVisible(params.rowIndex);
         this.rowRenderer.startEditingCell(gridCell, params.keyPress, params.charPress);
     }
@@ -658,41 +715,73 @@ export class GridApi {
         }
     }
 
+    public updateRowData(rowDataTransaction: RowDataTransaction): void {
+        if (this.inMemoryRowModel) {
+            this.inMemoryRowModel.updateRowData(rowDataTransaction);
+        } else if (this.infinitePageRowModel) {
+            this.infinitePageRowModel.updateRowData(rowDataTransaction);
+        } else {
+            console.error('ag-Grid: updateRowData() only works with InMemoryRowModel and InfiniteRowModel.');
+        }
+    }
+
     public insertItemsAtIndex(index: number, items: any[], skipRefresh = false): void {
-        this.rowModel.insertItemsAtIndex(index, items, skipRefresh);
+        console.warn('ag-Grid: insertItemsAtIndex() is deprecated, use updateRowData(transaction) instead.');
+        this.updateRowData({add: items, addIndex: index, update: null, remove: null});
     }
 
     public removeItems(rowNodes: RowNode[], skipRefresh = false): void {
-        this.rowModel.removeItems(rowNodes, skipRefresh);
+        console.warn('ag-Grid: insertItemsAtIndex() is deprecated, use updateRowData(transaction) instead.');
+        let dataToRemove: any[] = rowNodes.map(rowNode => rowNode.data);
+        this.updateRowData({add: null, addIndex: null, update: null, remove: dataToRemove});
     }
 
     public addItems(items: any[], skipRefresh = false): void {
-        this.rowModel.addItems(items, skipRefresh);
+        console.warn('ag-Grid: insertItemsAtIndex() is deprecated, use updateRowData(transaction) instead.');
+        this.updateRowData({add: items, addIndex: null, update: null, remove: null});
     }
 
     public refreshVirtualPageCache(): void {
-        console.warn('ag-Grid: refreshVirtualPageCache() is now called refreshInfinitePageCache(), please call refreshInfinitePageCache() instead');
-        this.refreshInfinitePageCache();
+        console.warn('ag-Grid: refreshVirtualPageCache() is now called refreshInfiniteCache(), please call refreshInfiniteCache() instead');
+        this.refreshInfiniteCache();
     }
 
     public refreshInfinitePageCache(): void {
+        console.warn('ag-Grid: refreshInfinitePageCache() is now called refreshInfiniteCache(), please call refreshInfiniteCache() instead');
+        this.refreshInfiniteCache();
+    }
+
+    public refreshInfiniteCache(): void {
         if (this.infinitePageRowModel) {
             this.infinitePageRowModel.refreshCache();
         } else {
-            console.warn(`ag-Grid: api.refreshVirtualPageCache is only available when rowModelType='virtual'.`);
+            console.warn(`ag-Grid: api.refreshInfiniteCache is only available when rowModelType='infinite'.`);
         }
     }
 
     public purgeVirtualPageCache(): void {
-        console.warn('ag-Grid: purgeVirtualPageCache() is now called purgeInfinitePageCache(), please call purgeInfinitePageCache() instead');
+        console.warn('ag-Grid: purgeVirtualPageCache() is now called purgeInfiniteCache(), please call purgeInfiniteCache() instead');
         this.purgeInfinitePageCache();
     }
 
     public purgeInfinitePageCache(): void {
+        console.warn('ag-Grid: purgeInfinitePageCache() is now called purgeInfiniteCache(), please call purgeInfiniteCache() instead');
+        this.purgeInfiniteCache();
+    }
+
+    public purgeInfiniteCache(): void {
         if (this.infinitePageRowModel) {
             this.infinitePageRowModel.purgeCache();
         } else {
-            console.warn(`ag-Grid: api.refreshVirtualPageCache is only available when rowModelType='virtual'.`);
+            console.warn(`ag-Grid: api.purgeInfiniteCache is only available when rowModelType='infinite'.`);
+        }
+    }
+
+    public purgeEnterpriseCache(route?: string[]): void {
+        if (this.enterpriseRowModel) {
+            this.enterpriseRowModel.purgeCache(route);
+        } else {
+            console.warn(`ag-Grid: api.purgeEnterpriseCache is only available when rowModelType='enterprise'.`);
         }
     }
 
@@ -731,15 +820,22 @@ export class GridApi {
     }
 
     public getVirtualPageState(): any {
-        console.warn('ag-Grid: getVirtualPageState() is now called getInfinitePageState(), please call getInfinitePageState() instead');
-        return this.getInfinitePageState();
+        console.warn('ag-Grid: getVirtualPageState() is now called getCacheBlockState(), please call getCacheBlockState() instead');
+        return this.getCacheBlockState();
     }
 
     public getInfinitePageState(): any {
+        console.warn('ag-Grid: getInfinitePageState() is now called getCacheBlockState(), please call getCacheBlockState() instead');
+        return this.getCacheBlockState();
+    }
+
+    public getCacheBlockState(): any {
         if (this.infinitePageRowModel) {
-            return this.infinitePageRowModel.getPageState();
+            return this.infinitePageRowModel.getBlockState();
+        } else if (this.enterpriseRowModel) {
+            return this.enterpriseRowModel.getBlockState();
         } else {
-            console.warn(`ag-Grid: api.getVirtualPageState is only available when rowModelType='virtual'.`);
+            console.warn(`ag-Grid: api.getCacheBlockState() is only available when rowModelType='infinite' or rowModelType='enterprise'.`);
         }
     }
 
@@ -747,12 +843,20 @@ export class GridApi {
         this.gridPanel.setBodyAndHeaderHeights();
     }
 
+    public getDisplayedRowAtIndex(index: number): RowNode {
+        return this.rowModel.getRow(index);
+    }
+
+    public getDisplayedRowCount(): number {
+        return this.rowModel.getRowCount();
+    }
+
     public paginationIsLastPageFound(): boolean {
-        return this.paginationService.isLastPageFound();
+        return this.paginationProxy.isLastPageFound();
     }
 
     public paginationGetPageSize(): number {
-        return this.paginationService.getPageSize();
+        return this.paginationProxy.getPageSize();
     }
 
     public paginationSetPageSize(size: number): void {
@@ -760,35 +864,35 @@ export class GridApi {
     }
 
     public paginationGetCurrentPage(): number {
-        return this.paginationService.getCurrentPage();
+        return this.paginationProxy.getCurrentPage();
     }
 
     public paginationGetTotalPages(): number {
-        return this.paginationService.getTotalPages();
+        return this.paginationProxy.getTotalPages();
     }
 
     public paginationGetRowCount(): number {
-        return this.paginationService.getTotalRowCount();
+        return this.paginationProxy.getTotalRowCount();
     }
 
     public paginationGoToNextPage(): void {
-        this.paginationService.goToNextPage();
+        this.paginationProxy.goToNextPage();
     }
 
     public paginationGoToPreviousPage(): void {
-        this.paginationService.goToPreviousPage();
+        this.paginationProxy.goToPreviousPage();
     }
 
     public paginationGoToFirstPage(): void {
-        this.paginationService.goToFirstPage();
+        this.paginationProxy.goToFirstPage();
     }
 
     public paginationGoToLastPage(): void {
-        this.paginationService.goToLastPage();
+        this.paginationProxy.goToLastPage();
     }
 
     public paginationGoToPage(page: number): void {
-        this.paginationService.goToPage(page);
+        this.paginationProxy.goToPage(page);
     }
 
     /*

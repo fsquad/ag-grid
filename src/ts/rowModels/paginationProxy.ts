@@ -1,6 +1,5 @@
 
 import {BeanStub} from "../context/beanStub";
-import {IPaginationService} from "./pagination/serverPaginationService";
 import {IRowModel} from "../interfaces/iRowModel";
 import {EventService} from "../eventService";
 import {Events, ModelUpdatedEvent} from "../events";
@@ -61,7 +60,7 @@ export class PaginationAutoPageSizeService extends BeanStub {
 }
 
 @Bean('paginationProxy')
-export class PaginationProxy extends BeanStub implements IPaginationService, IRowModel {
+export class PaginationProxy extends BeanStub implements IRowModel {
 
     @Autowired('rowModel') private rowModel: IRowModel;
     @Autowired('gridPanel') private gridPanel: GridPanel;
@@ -139,18 +138,6 @@ export class PaginationProxy extends BeanStub implements IPaginationService, IRo
         }
         let nodeIsInPage = rowNode.rowIndex >= this.topRowIndex && rowNode.rowIndex <= this.bottomRowIndex;
         return nodeIsInPage;
-    }
-
-    public insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void {
-        return this.rowModel.insertItemsAtIndex(index, items, skipRefresh);
-    }
-
-    public removeItems(rowNodes: RowNode[], skipRefresh: boolean): void {
-        this.rowModel.removeItems(rowNodes, skipRefresh);
-    }
-
-    public addItems(items: any[], skipRefresh: boolean): void {
-        this.rowModel.addItems(items, skipRefresh);
     }
 
     public isEmpty(): boolean {

@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -32,16 +32,16 @@ var FlattenStage = (function () {
         var result = [];
         // putting value into a wrapper so it's passed by reference
         var nextRowTop = { value: 0 };
-        var pivotMode = this.columnController.isPivotMode();
+        var skipLeafNodes = this.columnController.isPivotMode();
         // if we are reducing, and not grouping, then we want to show the root node, as that
         // is where the pivot values are
-        var showRootNode = pivotMode && rootNode.leafGroup;
+        var showRootNode = skipLeafNodes && rootNode.leafGroup;
         var topList = showRootNode ? [rootNode] : rootNode.childrenAfterSort;
         // set all row tops to null, then set row tops on all visible rows. if we don't
         // do this, then the algorithm below only sets row tops, old row tops from old rows
         // will still lie around
         this.resetRowTops(rootNode);
-        this.recursivelyAddToRowsToDisplay(topList, result, nextRowTop, pivotMode);
+        this.recursivelyAddToRowsToDisplay(topList, result, nextRowTop, skipLeafNodes, 0);
         return result;
     };
     FlattenStage.prototype.resetRowTops = function (rowNode) {
@@ -57,44 +57,52 @@ var FlattenStage = (function () {
             }
         }
     };
-    FlattenStage.prototype.recursivelyAddToRowsToDisplay = function (rowsToFlatten, result, nextRowTop, reduce) {
+    FlattenStage.prototype.recursivelyAddToRowsToDisplay = function (rowsToFlatten, result, nextRowTop, skipLeafNodes, uiLevel) {
         if (utils_1.Utils.missingOrEmpty(rowsToFlatten)) {
             return;
         }
         var groupSuppressRow = this.gridOptionsWrapper.isGroupSuppressRow();
         var hideOpenParents = this.gridOptionsWrapper.isGroupHideOpenParents();
+        var removeSingleChildrenGroups = this.gridOptionsWrapper.isGroupRemoveSingleChildren();
         for (var i = 0; i < rowsToFlatten.length; i++) {
             var rowNode = rowsToFlatten[i];
-            var skipBecauseSuppressRow = groupSuppressRow && rowNode.group;
-            var skipBecauseReduce = reduce && !rowNode.group;
-            var skipBecauseOpen = hideOpenParents && rowNode.expanded;
-            var skipGroupNode = skipBecauseReduce || skipBecauseSuppressRow || skipBecauseOpen;
-            if (!skipGroupNode) {
-                this.addRowNodeToRowsToDisplay(rowNode, result, nextRowTop);
+            // check all these cases, for working out if this row should be included in the final mapped list
+            var isGroupSuppressedNode = groupSuppressRow && rowNode.group;
+            var isSkippedLeafNode = skipLeafNodes && !rowNode.group;
+            var isHiddenOpenParent = hideOpenParents && rowNode.expanded;
+            var isRemovedSingleChildrenGroup = removeSingleChildrenGroups && rowNode.group && rowNode.childrenAfterGroup.length === 1;
+            var thisRowShouldBeRendered = !isSkippedLeafNode && !isGroupSuppressedNode && !isHiddenOpenParent && !isRemovedSingleChildrenGroup;
+            if (thisRowShouldBeRendered) {
+                this.addRowNodeToRowsToDisplay(rowNode, result, nextRowTop, uiLevel);
             }
             if (rowNode.group) {
-                if (rowNode.expanded) {
-                    this.recursivelyAddToRowsToDisplay(rowNode.childrenAfterSort, result, nextRowTop, reduce);
+                // we traverse the group if it is expended, however we always traverse if the parent node
+                // was removed (as the group will never be opened if it is not displayed, we show the children instead)
+                if (rowNode.expanded || isRemovedSingleChildrenGroup) {
+                    // if the parent was excluded, then ui level is that of the parent
+                    var uiLevelForChildren = isRemovedSingleChildrenGroup ? uiLevel : uiLevel + 1;
+                    this.recursivelyAddToRowsToDisplay(rowNode.childrenAfterSort, result, nextRowTop, skipLeafNodes, uiLevelForChildren);
                     // put a footer in if user is looking for it
                     if (this.gridOptionsWrapper.isGroupIncludeFooter()) {
                         this.ensureFooterNodeExists(rowNode);
-                        this.addRowNodeToRowsToDisplay(rowNode.sibling, result, nextRowTop);
+                        this.addRowNodeToRowsToDisplay(rowNode.sibling, result, nextRowTop, uiLevel);
                     }
                 }
             }
-            if (rowNode.canFlower && rowNode.expanded) {
+            else if (rowNode.canFlower && rowNode.expanded) {
                 var flowerNode = this.createFlowerNode(rowNode);
-                this.addRowNodeToRowsToDisplay(flowerNode, result, nextRowTop);
+                this.addRowNodeToRowsToDisplay(flowerNode, result, nextRowTop, uiLevel);
             }
         }
     };
     // duplicated method, it's also in floatingRowModel
-    FlattenStage.prototype.addRowNodeToRowsToDisplay = function (rowNode, result, nextRowTop) {
+    FlattenStage.prototype.addRowNodeToRowsToDisplay = function (rowNode, result, nextRowTop, uiLevel) {
         result.push(rowNode);
         if (utils_1.Utils.missing(rowNode.rowHeight)) {
             var rowHeight = this.gridOptionsWrapper.getRowHeightForNode(rowNode);
             rowNode.setRowHeight(rowHeight);
         }
+        rowNode.setUiLevel(uiLevel);
         rowNode.setRowTop(nextRowTop.value);
         rowNode.setRowIndex(result.length - 1);
         nextRowTop.value += rowNode.rowHeight;

@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -46,12 +46,11 @@ var InMemoryRowModel = (function () {
         this.eventService.addModalPriorityEventListener(events_1.Events.EVENT_FILTER_CHANGED, this.onFilterChanged.bind(this));
         this.eventService.addModalPriorityEventListener(events_1.Events.EVENT_SORT_CHANGED, this.onSortChanged.bind(this));
         this.eventService.addModalPriorityEventListener(events_1.Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.refreshModel.bind(this, { step: constants_1.Constants.STEP_PIVOT }));
+        this.gridOptionsWrapper.addEventListener(gridOptionsWrapper_1.GridOptionsWrapper.PROP_GROUP_REMOVE_SINGLE_CHILDREN, this.refreshModel.bind(this, { step: constants_1.Constants.STEP_MAP, keepRenderedRows: true, animate: true }));
         this.rootNode = new rowNode_1.RowNode();
         this.nodeManager = new inMemoryNodeManager_1.InMemoryNodeManager(this.rootNode, this.gridOptionsWrapper, this.context, this.eventService);
         this.context.wireBean(this.rootNode);
-        if (this.gridOptionsWrapper.isRowModelDefault()) {
-            this.setRowData(this.gridOptionsWrapper.getRowData(), this.columnController.isReady());
-        }
+        this.setRowData(this.gridOptionsWrapper.getRowData(), this.columnController.isReady());
     };
     InMemoryRowModel.prototype.isLastRowFound = function () {
         return true;
@@ -117,12 +116,12 @@ var InMemoryRowModel = (function () {
         // fallthrough in below switch is on purpose,
         // eg if STEP_FILTER, then all steps below this
         // step get done
-        // var start: number;
+        // let start: number;
         // console.log('======= start =======');
         switch (params.step) {
             case constants_1.Constants.STEP_EVERYTHING:
                 // start = new Date().getTime();
-                this.doRowGrouping(params.groupState, params.newRowNodes);
+                this.doRowGrouping(params.groupState, params.rowNodeTransaction);
             // console.log('rowGrouping = ' + (new Date().getTime() - start));
             case constants_1.Constants.STEP_FILTER:
                 // start = new Date().getTime();
@@ -277,7 +276,7 @@ var InMemoryRowModel = (function () {
                 // go to the next level if it is a group
                 if (node.group) {
                     // depending on the recursion type, we pick a difference set of children
-                    var nodeChildren;
+                    var nodeChildren = void 0;
                     switch (recursionType) {
                         case RecursionType.Normal:
                             nodeChildren = node.childrenAfterGroup;
@@ -330,15 +329,15 @@ var InMemoryRowModel = (function () {
     InMemoryRowModel.prototype.doSort = function () {
         this.sortStage.execute({ rowNode: this.rootNode });
     };
-    InMemoryRowModel.prototype.doRowGrouping = function (groupState, newRowNodes) {
+    InMemoryRowModel.prototype.doRowGrouping = function (groupState, rowNodeTransaction) {
         // grouping is enterprise only, so if service missing, skip the step
         var rowsAlreadyGrouped = utils_1.Utils.exists(this.gridOptionsWrapper.getNodeChildDetailsFunc());
         if (rowsAlreadyGrouped) {
             return;
         }
         if (this.groupStage) {
-            if (newRowNodes) {
-                this.groupStage.execute({ rowNode: this.rootNode, newRowNodes: newRowNodes });
+            if (rowNodeTransaction) {
+                this.groupStage.execute({ rowNode: this.rootNode, rowNodeTransaction: rowNodeTransaction });
             }
             else {
                 // groups are about to get disposed, so need to deselect any that are selected
@@ -384,12 +383,18 @@ var InMemoryRowModel = (function () {
         utils_1.Utils.traverseNodesWithKey(this.rootNode.childrenAfterGroup, function (node, key) { return result[key] = node.expanded; });
         return result;
     };
+    InMemoryRowModel.prototype.getCopyOfNodesMap = function () {
+        return this.nodeManager.getCopyOfNodesMap();
+    };
+    InMemoryRowModel.prototype.getRowNode = function (id) {
+        return this.nodeManager.getRowNode(id);
+    };
     // rows: the rows to put into the model
     // firstId: the first id to use, used for paging, where we are not on the first page
-    InMemoryRowModel.prototype.setRowData = function (rowData, refresh, firstId) {
+    InMemoryRowModel.prototype.setRowData = function (rowData, refresh) {
         // remember group state, so we can expand groups that should be expanded
         var groupState = this.getGroupState();
-        this.nodeManager.setRowData(rowData, firstId);
+        this.nodeManager.setRowData(rowData);
         // this event kicks off:
         // - clears selection
         // - updates filters
@@ -402,6 +407,17 @@ var InMemoryRowModel = (function () {
                 newData: true
             });
         }
+    };
+    InMemoryRowModel.prototype.updateRowData = function (rowDataTran) {
+        var rowNodeTran = this.nodeManager.updateRowData(rowDataTran);
+        this.refreshModel({
+            step: constants_1.Constants.STEP_EVERYTHING,
+            rowNodeTransaction: rowNodeTran,
+            keepRenderedRows: true,
+            animate: true,
+            keepEditingRows: true
+        });
+        this.eventService.dispatchEvent(events_1.Events.EVENT_ROW_DATA_UPDATED);
     };
     InMemoryRowModel.prototype.doRowsToDisplay = function () {
         this.rowsToDisplay = this.flattenStage.execute({ rowNode: this.rootNode });

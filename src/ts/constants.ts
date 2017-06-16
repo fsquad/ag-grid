@@ -6,8 +6,6 @@ export class Constants {
     static STEP_MAP = 3;
     static STEP_AGGREGATE = 4;
     static STEP_PIVOT = 5;
-    static STEP_PAGINATE = 6;
-    static STEP_SET_HEIGHTS = 7;
 
     static ROW_BUFFER_SIZE = 10;
     static LAYOUT_INTERVAL = 500;
@@ -44,8 +42,6 @@ export class Constants {
     static KEY_CTRL_RIGHT_NAME = 'ctrlRight';
     static KEY_CTRL_DOWN_NAME = 'ctrlDown';
 
-    static ROW_MODEL_TYPE_PAGINATION = 'pagination';
-    static ROW_MODEL_TYPE_VIRTUAL_DEPRECATED = 'virtual';
     static ROW_MODEL_TYPE_INFINITE = 'infinite';
     static ROW_MODEL_TYPE_VIEWPORT = 'viewport';
     static ROW_MODEL_TYPE_NORMAL = 'normal';

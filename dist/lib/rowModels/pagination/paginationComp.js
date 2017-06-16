@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -29,7 +29,6 @@ var component_1 = require("../../widgets/component");
 var context_1 = require("../../context/context");
 var gridOptionsWrapper_1 = require("../../gridOptionsWrapper");
 var componentAnnotations_1 = require("../../widgets/componentAnnotations");
-var serverPaginationService_1 = require("./serverPaginationService");
 var utils_1 = require("../../utils");
 var eventService_1 = require("../../eventService");
 var events_1 = require("../../events");
@@ -47,12 +46,6 @@ var PaginationComp = (function (_super) {
         this.addDestroyableEventListener(this.btLast, 'click', this.onBtLast.bind(this));
         this.addDestroyableEventListener(this.btNext, 'click', this.onBtNext.bind(this));
         this.addDestroyableEventListener(this.btPrevious, 'click', this.onBtPrevious.bind(this));
-        if (this.gridOptionsWrapper.isPagination()) {
-            this.paginationService = this.paginationProxy;
-        }
-        else {
-            this.paginationService = this.serverPaginationService;
-        }
         this.onPaginationChanged();
     };
     PaginationComp.prototype.onPaginationChanged = function () {
@@ -62,7 +55,7 @@ var PaginationComp = (function (_super) {
         this.setTotalLabels();
     };
     PaginationComp.prototype.setCurrentPageLabel = function () {
-        var currentPage = this.paginationService.getCurrentPage();
+        var currentPage = this.paginationProxy.getCurrentPage();
         this.lbCurrent.innerHTML = utils_1._.formatNumberCommas(currentPage + 1);
     };
     PaginationComp.prototype.getTemplate = function () {
@@ -77,21 +70,21 @@ var PaginationComp = (function (_super) {
         return "<div class=\"ag-paging-panel ag-font-style\">\n                <span ref=\"eSummaryPanel\" class=\"ag-paging-row-summary-panel\">\n                    <span ref=\"lbFirstRowOnPage\"></span> " + strTo + " <span ref=\"lbLastRowOnPage\"></span> " + strOf + " <span ref=\"lbRecordCount\"></span>\n                </span>\n                <span class=\"ag-paging-page-summary-panel\">\n                    <button class=\"ag-paging-button\" ref=\"btFirst\">" + strFirst + "</button>\n                    <button class=\"ag-paging-button\" ref=\"btPrevious\">" + strPrevious + "</button>\n                    " + strPage + " <span ref=\"lbCurrent\"></span> " + strOf + " <span ref=\"lbTotal\"></span>\n                    <button class=\"ag-paging-button\" ref=\"btNext\">" + strNext + "</button>\n                    <button class=\"ag-paging-button\" ref=\"btLast\">" + strLast + "</button>\n                </span>\n            </div>";
     };
     PaginationComp.prototype.onBtNext = function () {
-        this.paginationService.goToNextPage();
+        this.paginationProxy.goToNextPage();
     };
     PaginationComp.prototype.onBtPrevious = function () {
-        this.paginationService.goToPreviousPage();
+        this.paginationProxy.goToPreviousPage();
     };
     PaginationComp.prototype.onBtFirst = function () {
-        this.paginationService.goToFirstPage();
+        this.paginationProxy.goToFirstPage();
     };
     PaginationComp.prototype.onBtLast = function () {
-        this.paginationService.goToLastPage();
+        this.paginationProxy.goToLastPage();
     };
     PaginationComp.prototype.enableOrDisableButtons = function () {
-        var currentPage = this.paginationService.getCurrentPage();
-        var maxRowFound = this.paginationService.isLastPageFound();
-        var totalPages = this.paginationService.getTotalPages();
+        var currentPage = this.paginationProxy.getCurrentPage();
+        var maxRowFound = this.paginationProxy.isLastPageFound();
+        var totalPages = this.paginationProxy.getTotalPages();
         var disablePreviousAndFirst = currentPage === 0;
         this.btPrevious.disabled = disablePreviousAndFirst;
         this.btFirst.disabled = disablePreviousAndFirst;
@@ -103,11 +96,11 @@ var PaginationComp = (function (_super) {
         this.btLast.disabled = disableLast;
     };
     PaginationComp.prototype.updateRowLabels = function () {
-        var currentPage = this.paginationService.getCurrentPage();
-        var pageSize = this.paginationService.getPageSize();
-        var maxRowFound = this.paginationService.isLastPageFound();
-        var rowCount = this.paginationService.isLastPageFound() ?
-            this.paginationService.getTotalRowCount() : null;
+        var currentPage = this.paginationProxy.getCurrentPage();
+        var pageSize = this.paginationProxy.getPageSize();
+        var maxRowFound = this.paginationProxy.isLastPageFound();
+        var rowCount = this.paginationProxy.isLastPageFound() ?
+            this.paginationProxy.getTotalRowCount() : null;
         var startRow;
         var endRow;
         if (this.isZeroPagesToDisplay()) {
@@ -125,15 +118,15 @@ var PaginationComp = (function (_super) {
         this.lbLastRowOnPage.innerHTML = utils_1._.formatNumberCommas(endRow);
     };
     PaginationComp.prototype.isZeroPagesToDisplay = function () {
-        var maxRowFound = this.paginationService.isLastPageFound();
-        var totalPages = this.paginationService.getTotalPages();
+        var maxRowFound = this.paginationProxy.isLastPageFound();
+        var totalPages = this.paginationProxy.getTotalPages();
         return maxRowFound && totalPages === 0;
     };
     PaginationComp.prototype.setTotalLabels = function () {
-        var lastPageFound = this.paginationService.isLastPageFound();
-        var totalPages = this.paginationService.getTotalPages();
-        var rowCount = this.paginationService.isLastPageFound() ?
-            this.paginationService.getTotalRowCount() : null;
+        var lastPageFound = this.paginationProxy.isLastPageFound();
+        var totalPages = this.paginationProxy.getTotalPages();
+        var rowCount = this.paginationProxy.isLastPageFound() ?
+            this.paginationProxy.getTotalRowCount() : null;
         if (lastPageFound) {
             this.lbTotal.innerHTML = utils_1._.formatNumberCommas(totalPages);
             this.lbRecordCount.innerHTML = utils_1._.formatNumberCommas(rowCount);
@@ -154,10 +147,6 @@ __decorate([
     context_1.Autowired('eventService'),
     __metadata("design:type", eventService_1.EventService)
 ], PaginationComp.prototype, "eventService", void 0);
-__decorate([
-    context_1.Autowired('serverPaginationService'),
-    __metadata("design:type", serverPaginationService_1.ServerPaginationService)
-], PaginationComp.prototype, "serverPaginationService", void 0);
 __decorate([
     context_1.Autowired('paginationProxy'),
     __metadata("design:type", paginationProxy_1.PaginationProxy)

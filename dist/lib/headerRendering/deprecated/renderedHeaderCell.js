@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -56,10 +56,10 @@ var RenderedHeaderCell = (function (_super) {
     RenderedHeaderCell.prototype.init = function () {
         var eGui = this.headerTemplateLoader.createHeaderElement(this.column);
         this.setGui(eGui);
-        utils_1.Utils.addCssClass(eGui, 'ag-header-cell');
         this.createScope();
         this.addAttributes();
         cssClassApplier_1.CssClassApplier.addHeaderClassesFromColDef(this.column.getColDef(), eGui, this.gridOptionsWrapper, this.column, null);
+        utils_1.Utils.addCssClass(eGui, 'ag-header-cell');
         // label div
         var eHeaderCellLabel = eGui.querySelector('#agHeaderCellLabel');
         this.displayName = this.columnController.getDisplayNameForColumn(this.column, 'header', true);
@@ -193,15 +193,15 @@ var RenderedHeaderCell = (function (_super) {
             return;
         }
         if (eHeaderCellLabel) {
-            var dragSource = {
+            var dragSource_1 = {
                 type: dragAndDropService_1.DragSourceType.HeaderCell,
                 eElement: eHeaderCellLabel,
                 dragItem: [this.column],
                 dragItemName: this.displayName,
                 dragSourceDropTarget: this.dragSourceDropTarget
             };
-            this.dragAndDropService.addDragSource(dragSource, true);
-            this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource); });
+            this.dragAndDropService.addDragSource(dragSource_1, true);
+            this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource_1); });
         }
     };
     RenderedHeaderCell.prototype.setupTap = function () {

@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { IFilterParams } from "./iFilter";
@@ -16,4 +16,5 @@ export interface ISetFilterParams extends IFilterParams {
     suppressMiniFilter: boolean;
     selectAllOnMiniFilter: boolean;
     comparator?: (a: any, b: any) => number;
+    debounceMs?: number;
 }

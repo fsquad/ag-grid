@@ -1,24 +1,24 @@
 import {GridOptionsWrapper} from "./gridOptionsWrapper";
 import {Column} from "./entities/column";
 import {RowNode} from "./entities/rowNode";
-var FUNCTION_STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
-var FUNCTION_ARGUMENT_NAMES = /([^\s,]+)/g;
+let FUNCTION_STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+let FUNCTION_ARGUMENT_NAMES = /([^\s,]+)/g;
 
 // util class, only used when debugging, for printing time to console
 export class Timer {
 
     private timestamp = new Date().getTime();
-    
+
     public print(msg: string) {
-        var duration = (new Date().getTime()) - this.timestamp;
+        let duration = (new Date().getTime()) - this.timestamp;
         console.log(`${msg} = ${duration}`);
         this.timestamp = new Date().getTime();
     }
-    
+
 }
 
 /** HTML Escapes. */
-const HTML_ESCAPES :{[id:string]:string}= {
+const HTML_ESCAPES: { [id: string]: string } = {
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
@@ -43,27 +43,33 @@ export class Utils {
 
     // returns true if the event is close to the original event by X pixels either vertically or horizontally.
     // we only start dragging after X pixels so this allows us to know if we should start dragging yet.
-    static areEventsNear(e1: MouseEvent|Touch, e2: MouseEvent|Touch, pixelCount: number): boolean {
+    static areEventsNear(e1: MouseEvent | Touch, e2: MouseEvent | Touch, pixelCount: number): boolean {
         // by default, we wait 4 pixels before starting the drag
-        if (pixelCount===0) {
+        if (pixelCount === 0) {
             return false;
         }
-        var diffX = Math.abs(e1.clientX - e2.clientX);
-        var diffY = Math.abs(e1.clientY - e2.clientY);
+        let diffX = Math.abs(e1.clientX - e2.clientX);
+        let diffY = Math.abs(e1.clientY - e2.clientY);
 
         return Math.max(diffX, diffY) <= pixelCount;
     }
 
     static shallowCompare(arr1: any[], arr2: any[]): boolean {
         // if both are missing, then they are the same
-        if (this.missing(arr1) && this.missing(arr2)) { return true; }
+        if (this.missing(arr1) && this.missing(arr2)) {
+            return true;
+        }
         // if one is present, but other is missing, then then are different
-        if (this.missing(arr1) || this.missing(arr2)) { return false; }
+        if (this.missing(arr1) || this.missing(arr2)) {
+            return false;
+        }
 
-        if (arr1.length!==arr2.length) { return false; }
+        if (arr1.length !== arr2.length) {
+            return false;
+        }
 
-        for (let i = 0; i<arr1.length; i++) {
-            if (arr1[i]!==arr2[i]) {
+        for (let i = 0; i < arr1.length; i++) {
+            if (arr1[i] !== arr2[i]) {
                 return false;
             }
         }
@@ -72,15 +78,15 @@ export class Utils {
     }
 
     static getNameOfClass(TheClass: any) {
-        var funcNameRegex = /function (.{1,})\(/;
-        var funcAsString = TheClass.toString();
-        var results  = (funcNameRegex).exec(funcAsString);
+        let funcNameRegex = /function (.{1,})\(/;
+        let funcAsString = TheClass.toString();
+        let results = (funcNameRegex).exec(funcAsString);
         return (results && results.length > 1) ? results[1] : "";
     }
 
-    static values<T>(object: {[key: string]: T}): T[] {
-        var result: T[] = [];
-        this.iterateObject(object, (key: string, value: T)=> {
+    static values<T>(object: { [key: string]: T }): T[] {
+        let result: T[] = [];
+        this.iterateObject(object, (key: string, value: T) => {
             result.push(value);
         });
         return result;
@@ -95,9 +101,9 @@ export class Utils {
             return data[field];
         } else {
             // otherwise it is a deep value, so need to dig for it
-            var fields = field.split('.');
-            var currentObject = data;
-            for (var i = 0; i<fields.length; i++) {
+            let fields = field.split('.');
+            let currentObject = data;
+            for (let i = 0; i < fields.length; i++) {
                 currentObject = currentObject[fields[i]];
                 if (this.missing(currentObject)) {
                     return null;
@@ -108,7 +114,7 @@ export class Utils {
     }
 
     static getScrollLeft(element: HTMLElement, rtl: boolean): number {
-        var scrollLeft = element.scrollLeft;
+        let scrollLeft = element.scrollLeft;
         if (rtl) {
             // Absolute value - for FF that reports RTL scrolls in negative numbers
             scrollLeft = Math.abs(scrollLeft);
@@ -147,40 +153,42 @@ export class Utils {
         element.scrollLeft = value;
     }
 
-    static iterateObject(object: any, callback: (key:string, value: any) => void) {
-        if (this.missing(object)) { return; }
-        var keys = Object.keys(object);
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            var value = object[key];
+    static iterateObject(object: any, callback: (key: string, value: any) => void) {
+        if (this.missing(object)) {
+            return;
+        }
+        let keys = Object.keys(object);
+        for (let i = 0; i < keys.length; i++) {
+            let key = keys[i];
+            let value = object[key];
             callback(key, value);
         }
     }
 
     static cloneObject<T>(object: T): T {
-        var copy = <T>{};
-        var keys = Object.keys(object);
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            var value = (<any>object)[key];
+        let copy = <T>{};
+        let keys = Object.keys(object);
+        for (let i = 0; i < keys.length; i++) {
+            let key = keys[i];
+            let value = (<any>object)[key];
             (<any>copy)[key] = value;
         }
         return copy;
     }
 
     static map<TItem, TResult>(array: TItem[], callback: (item: TItem) => TResult) {
-        var result: TResult[] = [];
-        for (var i = 0; i < array.length; i++) {
-            var item = array[i];
-            var mappedItem = callback(item);
+        let result: TResult[] = [];
+        for (let i = 0; i < array.length; i++) {
+            let item = array[i];
+            let mappedItem = callback(item);
             result.push(mappedItem);
         }
         return result;
     }
 
     static mapObject<TResult>(object: any, callback: (item: any) => TResult) {
-        var result: TResult[] = [];
-        Utils.iterateObject(object, (key: string, value: any)=> {
+        let result: TResult[] = [];
+        Utils.iterateObject(object, (key: string, value: any) => {
             result.push(callback(value));
         });
         return result;
@@ -191,14 +199,14 @@ export class Utils {
             return;
         }
 
-        for (var i = 0; i < array.length; i++) {
-            var value = array[i];
+        for (let i = 0; i < array.length; i++) {
+            let value = array[i];
             callback(value, i);
         }
     }
 
     static filter<T>(array: T[], callback: (item: T) => boolean): T[] {
-        var result: T[] = [];
+        let result: T[] = [];
         array.forEach(function (item: T) {
             if (callback(item)) {
                 result.push(item);
@@ -207,24 +215,34 @@ export class Utils {
         return result;
     }
 
+    static getAllKeysInObjects(objects: any[]): string[] {
+        let allValues: any = {};
+        objects.forEach(obj => {
+            if (obj) {
+                Object.keys(obj).forEach(key => allValues[key] = null);
+            }
+        });
+        return Object.keys(allValues);
+    }
 
     static mergeDeep(object: any, source: any): void {
         if (this.exists(source)) {
-            this.iterateObject(source, function(key: string, value: any) {
+            this.iterateObject(source, function (key: string, target: any) {
                 let currentValue: any = object[key];
-                let target: any = source[key];
 
-                if (currentValue == null){
-                    object[key] = value;
+                if (currentValue == null) {
+                    object[key] = target;
+                    return;
                 }
 
-                if (typeof currentValue === 'object'){
-                    if (target){
-                        Utils.mergeDeep (object[key], target)
+                if (typeof currentValue === 'object') {
+                    if (target) {
+                        Utils.mergeDeep(currentValue, target);
+                        return;
                     }
                 }
 
-                if (target){
+                if (target) {
                     object[key] = target;
                 }
             });
@@ -233,44 +251,46 @@ export class Utils {
 
     static assign(object: any, source: any): void {
         if (this.exists(source)) {
-            this.iterateObject(source, function(key: string, value: any) {
+            this.iterateObject(source, function (key: string, value: any) {
                 object[key] = value;
             });
         }
     }
 
-    static parseYyyyMmDdToDate (yyyyMmDd:string, separator:string):Date{
-        try{
+    static parseYyyyMmDdToDate(yyyyMmDd: string, separator: string): Date {
+        try {
             if (!yyyyMmDd) return null;
             if (yyyyMmDd.indexOf(separator) === -1) return null;
 
-            let fields:string[] = yyyyMmDd.split(separator);
+            let fields: string[] = yyyyMmDd.split(separator);
             if (fields.length != 3) return null;
-            return new Date (Number(fields[0]),Number(fields[1]) - 1,Number(fields[2]));
-        }catch (e){
+            return new Date(Number(fields[0]), Number(fields[1]) - 1, Number(fields[2]));
+        } catch (e) {
             return null;
         }
     }
 
-    static serializeDateToYyyyMmDd (date:Date, separator:string):string {
+    static serializeDateToYyyyMmDd(date: Date, separator: string): string {
         if (!date) return null;
         return date.getFullYear() + separator + Utils.pad(date.getMonth() + 1, 2) + separator + Utils.pad(date.getDate(), 2)
     }
 
-    static pad(num: number, totalStringSize:number) : string{
-        let asString:string = num + "";
+    static pad(num: number, totalStringSize: number): string {
+        let asString: string = num + "";
         while (asString.length < totalStringSize) asString = "0" + asString;
         return asString;
     }
 
     static pushAll(target: any[], source: any[]): void {
-        if (this.missing(source) || this.missing(target)) { return; }
-        source.forEach( func => target.push(func) );
+        if (this.missing(source) || this.missing(target)) {
+            return;
+        }
+        source.forEach(func => target.push(func));
     }
 
     static getFunctionParameters(func: any) {
-        var fnStr = func.toString().replace(FUNCTION_STRIP_COMMENTS, '');
-        var result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(FUNCTION_ARGUMENT_NAMES);
+        let fnStr = func.toString().replace(FUNCTION_STRIP_COMMENTS, '');
+        let result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(FUNCTION_ARGUMENT_NAMES);
         if (result === null) {
             return [];
         } else {
@@ -278,7 +298,7 @@ export class Utils {
         }
     }
 
-    static find<T>(collection: T[]| {[id:string]:T}, predicate: string |((item: T) => void), value?: any): T {
+    static find<T>(collection: T[] | { [id: string]: T }, predicate: string | ((item: T) => void), value?: any): T {
         if (collection === null || collection === undefined) {
             return null;
         }
@@ -290,16 +310,16 @@ export class Utils {
 
         let collectionAsArray = <T[]> collection;
 
-        var firstMatchingItem: T;
-        for (var i = 0; i < collectionAsArray.length; i++) {
-            var item: T = collectionAsArray[i];
+        let firstMatchingItem: T;
+        for (let i = 0; i < collectionAsArray.length; i++) {
+            let item: T = collectionAsArray[i];
             if (typeof predicate === 'string') {
                 if ((<any>item)[predicate] === value) {
                     firstMatchingItem = item;
                     break;
                 }
             } else {
-                var callback = <(item: T) => void> predicate;
+                let callback = <(item: T) => void> predicate;
                 if (callback(item)) {
                     firstMatchingItem = item;
                     break;
@@ -320,8 +340,8 @@ export class Utils {
     }
 
     static iterateArray<T>(array: T[], callback: (item: T, index: number) => void) {
-        for (var index = 0; index < array.length; index++) {
-            var value = array[index];
+        for (let index = 0; index < array.length; index++) {
+            let value = array[index];
             callback(value, index);
         }
     }
@@ -331,7 +351,7 @@ export class Utils {
     static isNode(o: any) {
         return (
             typeof Node === "function" ? o instanceof Node :
-            o && typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName === "string"
+                o && typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName === "string"
         );
     }
 
@@ -340,7 +360,7 @@ export class Utils {
     static isElement(o: any) {
         return (
             typeof HTMLElement === "function" ? o instanceof HTMLElement : //DOM2
-            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName === "string"
+                o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName === "string"
         );
     }
 
@@ -372,7 +392,7 @@ export class Utils {
         return !this.exists(value);
     }
 
-    static missingOrEmpty(value: any[]|string): boolean {
+    static missingOrEmpty(value: any[] | string): boolean {
         return this.missing(value) || value.length === 0;
     }
 
@@ -381,7 +401,7 @@ export class Utils {
     }
 
     static exists(value: any): boolean {
-        if (value===null || value===undefined || value==='') {
+        if (value === null || value === undefined || value === '') {
             return false;
         } else {
             return true;
@@ -390,7 +410,7 @@ export class Utils {
 
     static anyExists(values: any[]): boolean {
         if (values) {
-            for (var i = 0; i<values.length; i++) {
+            for (let i = 0; i < values.length; i++) {
                 if (this.exists(values[i])) {
                     return true;
                 }
@@ -430,7 +450,7 @@ export class Utils {
      * the dom api to load html directly, eg we cannot do this: document.createElement(template)
      */
     static loadTemplate(template: string): HTMLElement {
-        var tempDiv = document.createElement("div");
+        let tempDiv = document.createElement("div");
         tempDiv.innerHTML = template;
         return <HTMLElement> tempDiv.firstChild;
     }
@@ -450,16 +470,18 @@ export class Utils {
     }
 
     static addCssClass(element: HTMLElement, className: string) {
-        if (!className || className.length===0) { return; }
+        if (!className || className.length === 0) {
+            return;
+        }
         if (className.indexOf(' ') >= 0) {
-            className.split(' ').forEach( value => this.addCssClass(element, value));
+            className.split(' ').forEach(value => this.addCssClass(element, value));
             return;
         }
         if (element.classList) {
             element.classList.add(className);
         } else {
             if (element.className && element.className.length > 0) {
-                var cssClasses = element.className.split(' ');
+                let cssClasses = element.className.split(' ');
                 if (cssClasses.indexOf(className) < 0) {
                     cssClasses.push(className);
                     element.className = cssClasses.join(' ');
@@ -477,13 +499,13 @@ export class Utils {
         } else if (element.className) {
             // for older browsers, check against the string of class names
             // if only one class, can check for exact match
-            var onlyClass = element.className === className;
+            let onlyClass = element.className === className;
             // if many classes, check for class name, we have to pad with ' ' to stop other
             // class names that are a substring of this class
-            var contains = element.className.indexOf(' ' + className + ' ') >= 0;
+            let contains = element.className.indexOf(' ' + className + ' ') >= 0;
             // the padding above then breaks when it's the first or last class names
-            var startsWithClass = element.className.indexOf(className + ' ')===0;
-            var endsWithClass = element.className.lastIndexOf(' ' + className) === (element.className.length - className.length -1);
+            let startsWithClass = element.className.indexOf(className + ' ') === 0;
+            let endsWithClass = element.className.lastIndexOf(' ' + className) === (element.className.length - className.length - 1);
             return onlyClass || contains || startsWithClass || endsWithClass;
         } else {
             // if item is not a node
@@ -494,7 +516,7 @@ export class Utils {
     static getElementAttribute(element: any, attributeName: string): string {
         if (element.attributes) {
             if (element.attributes[attributeName]) {
-                var attribute = element.attributes[attributeName];
+                let attribute = element.attributes[attributeName];
                 return attribute.value;
             } else {
                 return null;
@@ -503,7 +525,7 @@ export class Utils {
             return null;
         }
     }
-    
+
     static offsetHeight(element: HTMLElement) {
         return element && element.clientHeight ? element.clientHeight : 0;
     }
@@ -514,8 +536,8 @@ export class Utils {
 
     static removeCssClass(element: HTMLElement, className: string) {
         if (element.className && element.className.length > 0) {
-            var cssClasses = element.className.split(' ');
-            var index = cssClasses.indexOf(className);
+            let cssClasses = element.className.split(' ');
+            let index = cssClasses.indexOf(className);
             if (index >= 0) {
                 cssClasses.splice(index, 1);
                 element.className = cssClasses.join(' ');
@@ -524,12 +546,14 @@ export class Utils {
     }
 
     static removeRepeatsFromArray<T>(array: T[], object: T) {
-        if (!array) { return; }
-        for (var index = array.length - 2; index >= 0; index--) {
-            var thisOneMatches = array[index]===object;
-            var nextOneMatches = array[index+1]===object;
+        if (!array) {
+            return;
+        }
+        for (let index = array.length - 2; index >= 0; index--) {
+            let thisOneMatches = array[index] === object;
+            let nextOneMatches = array[index + 1] === object;
             if (thisOneMatches && nextOneMatches) {
-                array.splice(index+1, 1);
+                array.splice(index + 1, 1);
             }
         }
 
@@ -542,7 +566,7 @@ export class Utils {
     }
 
     static removeAllFromArray<T>(array: T[], toRemove: T[]) {
-        toRemove.forEach( item => {
+        toRemove.forEach(item => {
             if (array.indexOf(item) >= 0) {
                 array.splice(array.indexOf(item), 1);
             }
@@ -554,30 +578,32 @@ export class Utils {
     }
 
     static insertArrayIntoArray<T>(dest: T[], src: T[], toIndex: number) {
-        if (this.missing(dest) || this.missing(src)) { return; }
+        if (this.missing(dest) || this.missing(src)) {
+            return;
+        }
         // put items in backwards, otherwise inserted items end up in reverse order
-        for (let i = src.length - 1; i>=0; i--) {
-            var item = src[i];
+        for (let i = src.length - 1; i >= 0; i--) {
+            let item = src[i];
             this.insertIntoArray(dest, item, toIndex);
         }
     }
 
     static moveInArray<T>(array: T[], objectsToMove: T[], toIndex: number) {
         // first take out it items from the array
-        objectsToMove.forEach( (obj)=> {
+        objectsToMove.forEach((obj) => {
             this.removeFromArray(array, obj);
         });
 
         // now add the objects, in same order as provided to us, that means we start at the end
         // as the objects will be pushed to the right as they are inserted
-        objectsToMove.slice().reverse().forEach( (obj)=> {
+        objectsToMove.slice().reverse().forEach((obj) => {
             this.insertIntoArray(array, obj, toIndex);
         });
     }
-    
+
     static defaultComparator(valueA: any, valueB: any): number {
-        var valueAMissing = valueA === null || valueA === undefined;
-        var valueBMissing = valueB === null || valueB === undefined;
+        let valueAMissing = valueA === null || valueA === undefined;
+        let valueBMissing = valueB === null || valueB === undefined;
         if (valueAMissing && valueBMissing) {
             return 0;
         }
@@ -617,8 +643,8 @@ export class Utils {
         if (array1.length !== array2.length) {
             return false;
         }
-        for (var i = 0; i<array1.length; i++) {
-            if (array1[i]!==array2[i]) {
+        for (let i = 0; i < array1.length; i++) {
+            if (array1[i] !== array2[i]) {
                 return false;
             }
         }
@@ -642,7 +668,9 @@ export class Utils {
     }
 
     static formatNumberTwoDecimalPlacesAndCommas(value: number): string {
-        if (typeof value !== 'number') { return ''; }
+        if (typeof value !== 'number') {
+            return '';
+        }
 
         // took this from: http://blog.tompawlak.org/number-currency-formatting-javascript
         return (Math.round(value * 100) / 100).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
@@ -651,7 +679,9 @@ export class Utils {
     // the native method number.toLocaleString(undefined, {minimumFractionDigits: 0}) puts in decimal places in IE,
     // so we use this method instead
     static formatNumberCommas(value: number): string {
-        if (typeof value !== 'number') { return ''; }
+        if (typeof value !== 'number') {
+            return '';
+        }
 
         // took this from: http://blog.tompawlak.org/number-currency-formatting-javascript
         return value.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
@@ -678,13 +708,13 @@ export class Utils {
      * if not, then use the second parameter, which is the svgFactory function
      */
     static createIcon(iconName: string, gridOptionsWrapper: GridOptionsWrapper, column: Column, svgFactoryFunc: () => HTMLElement): HTMLElement {
-        var eResult = document.createElement('span');
+        let eResult = document.createElement('span');
         eResult.appendChild(this.createIconNoSpan(iconName, gridOptionsWrapper, column, svgFactoryFunc));
         return eResult;
     }
 
     static createIconNoSpan(iconName: string, gridOptionsWrapper: GridOptionsWrapper, column: Column, svgFactoryFunc: () => HTMLElement): HTMLElement {
-        var userProvidedIcon: Function | string;
+        let userProvidedIcon: Function | string;
         // check col for icon first
         if (column && column.getColDef().icons) {
             userProvidedIcon = column.getColDef().icons[iconName];
@@ -695,7 +725,7 @@ export class Utils {
         }
         // now if user provided, use it
         if (userProvidedIcon) {
-            var rendererResult: any;
+            let rendererResult: any;
             if (typeof userProvidedIcon === 'function') {
                 rendererResult = userProvidedIcon();
             } else if (typeof userProvidedIcon === 'string') {
@@ -721,7 +751,9 @@ export class Utils {
     }
 
     static addStylesToElement(eElement: any, styles: any) {
-        if (!styles) { return; }
+        if (!styles) {
+            return;
+        }
         Object.keys(styles).forEach(function (key) {
             eElement.style[key] = styles[key];
         });
@@ -736,23 +768,23 @@ export class Utils {
     }
 
     static getScrollbarWidth() {
-        var outer = document.createElement("div");
+        let outer = document.createElement("div");
         outer.style.visibility = "hidden";
         outer.style.width = "100px";
         outer.style.msOverflowStyle = "scrollbar"; // needed for WinJS apps
 
         document.body.appendChild(outer);
 
-        var widthNoScroll = outer.offsetWidth;
+        let widthNoScroll = outer.offsetWidth;
         // force scrollbars
         outer.style.overflow = "scroll";
 
         // add innerdiv
-        var inner = document.createElement("div");
+        let inner = document.createElement("div");
         inner.style.width = "100%";
         outer.appendChild(inner);
 
-        var widthWithScroll = inner.offsetWidth;
+        let widthWithScroll = inner.offsetWidth;
 
         // remove divs
         outer.parentNode.removeChild(outer);
@@ -761,7 +793,7 @@ export class Utils {
     }
 
     static isKeyPressed(event: KeyboardEvent, keyToCheck: number) {
-        var pressedKey = event.which || event.keyCode;
+        let pressedKey = event.which || event.keyCode;
         return pressedKey === keyToCheck;
     }
 
@@ -774,32 +806,34 @@ export class Utils {
     }
 
     static isBrowserIE(): boolean {
-        if (this.isIE===undefined) {
+        if (this.isIE === undefined) {
             this.isIE = /*@cc_on!@*/false || !!(<any>document).documentMode; // At least IE6
         }
         return this.isIE;
     }
 
     static isBrowserEdge(): boolean {
-        if (this.isEdge===undefined) {
+        if (this.isEdge === undefined) {
             this.isEdge = !this.isBrowserIE() && !!(<any>window).StyleMedia;
         }
         return this.isEdge;
     }
 
     static isBrowserSafari(): boolean {
-        if (this.isSafari===undefined) {
+        if (this.isSafari === undefined) {
             let anyWindow = <any> window;
             // taken from https://github.com/ceolter/ag-grid/issues/550
             this.isSafari = Object.prototype.toString.call(anyWindow.HTMLElement).indexOf('Constructor') > 0
-                || (function (p) { return p.toString() === "[object SafariRemoteNotification]"; })
+                || (function (p) {
+                    return p.toString() === "[object SafariRemoteNotification]";
+                })
                 (!anyWindow.safari || anyWindow.safari.pushNotification);
         }
         return this.isSafari;
     }
 
     static isBrowserChrome(): boolean {
-        if (this.isChrome===undefined) {
+        if (this.isChrome === undefined) {
             let anyWindow = <any> window;
             this.isChrome = !!anyWindow.chrome && !!anyWindow.chrome.webstore;
         }
@@ -807,9 +841,10 @@ export class Utils {
     }
 
     static isBrowserFirefox(): boolean {
-        if (this.isFirefox===undefined) {
+        if (this.isFirefox === undefined) {
             let anyWindow = <any> window;
-            this.isFirefox = typeof anyWindow.InstallTrigger !== 'undefined';;
+            this.isFirefox = typeof anyWindow.InstallTrigger !== 'undefined';
+            ;
         }
         return this.isFirefox;
     }
@@ -817,7 +852,7 @@ export class Utils {
     // srcElement is only available in IE. In all other browsers it is target
     // http://stackoverflow.com/questions/5301643/how-can-i-make-event-srcelement-work-in-firefox-and-what-does-it-mean
     static getTarget(event: Event): Element {
-        var eventNoType = <any> event;
+        let eventNoType = <any> event;
         return eventNoType.target || eventNoType.srcElement;
     }
 
@@ -866,16 +901,16 @@ export class Utils {
         }
     }
 
-    static traverseNodesWithKey(nodes: RowNode[], callback: (node: RowNode, key: string)=>void): void {
-        var keyParts: any[] = [];
+    static traverseNodesWithKey(nodes: RowNode[], callback: (node: RowNode, key: string) => void): void {
+        let keyParts: any[] = [];
 
         recursiveSearchNodes(nodes);
 
         function recursiveSearchNodes(nodes: RowNode[]): void {
-            nodes.forEach( (node: RowNode) => {
+            nodes.forEach((node: RowNode) => {
                 if (node.group) {
                     keyParts.push(node.key);
-                    var key = keyParts.join('|');
+                    let key = keyParts.join('|');
                     callback(node, key);
                     recursiveSearchNodes(node.childrenAfterGroup);
                     keyParts.pop();
@@ -887,11 +922,12 @@ export class Utils {
     /**
      * From http://stackoverflow.com/questions/9716468/is-there-any-function-like-isnumeric-in-javascript-to-validate-numbers
      */
-    static isNumeric (value:any): boolean {
+    static isNumeric(value: any): boolean {
+        if (value === '') return false;
         return !isNaN(parseFloat(value)) && isFinite(value);
     }
 
-    static escape (toEscape:string):string {
+    static escape(toEscape: string): string {
         if (toEscape === null) return null;
         if (!toEscape.replace) return toEscape;
 
@@ -999,27 +1035,35 @@ export class Utils {
      *         Firefox v4/Win7  |     undefined    |       3
      *
      */
-    static normalizeWheel(event:any): any {
-        var PIXEL_STEP  = 10;
-        var LINE_HEIGHT = 40;
-        var PAGE_HEIGHT = 800;
+    static normalizeWheel(event: any): any {
+        let PIXEL_STEP = 10;
+        let LINE_HEIGHT = 40;
+        let PAGE_HEIGHT = 800;
 
         // spinX, spinY
-        var sX = 0;
-        var sY = 0;
+        let sX = 0;
+        let sY = 0;
 
         // pixelX, pixelY
-        var pX = 0;
-        var pY = 0;
+        let pX = 0;
+        let pY = 0;
 
         // Legacy
-        if ('detail'      in event) { sY = event.detail; }
-        if ('wheelDelta'  in event) { sY = -event.wheelDelta / 120; }
-        if ('wheelDeltaY' in event) { sY = -event.wheelDeltaY / 120; }
-        if ('wheelDeltaX' in event) { sX = -event.wheelDeltaX / 120; }
+        if ('detail' in event) {
+            sY = event.detail;
+        }
+        if ('wheelDelta' in event) {
+            sY = -event.wheelDelta / 120;
+        }
+        if ('wheelDeltaY' in event) {
+            sY = -event.wheelDeltaY / 120;
+        }
+        if ('wheelDeltaX' in event) {
+            sX = -event.wheelDeltaX / 120;
+        }
 
         // side scrolling on FF with DOMMouseScroll
-        if ( 'axis' in event && event.axis === event.HORIZONTAL_AXIS ) {
+        if ('axis' in event && event.axis === event.HORIZONTAL_AXIS) {
             sX = sY;
             sY = 0;
         }
@@ -1027,8 +1071,12 @@ export class Utils {
         pX = sX * PIXEL_STEP;
         pY = sY * PIXEL_STEP;
 
-        if ('deltaY' in event) { pY = event.deltaY; }
-        if ('deltaX' in event) { pX = event.deltaX; }
+        if ('deltaY' in event) {
+            pY = event.deltaY;
+        }
+        if ('deltaX' in event) {
+            pX = event.deltaX;
+        }
 
         if ((pX || pY) && event.deltaMode) {
             if (event.deltaMode == 1) {          // delta in LINE units
@@ -1041,13 +1089,72 @@ export class Utils {
         }
 
         // Fall-back if spin cannot be determined
-        if (pX && !sX) { sX = (pX < 1) ? -1 : 1; }
-        if (pY && !sY) { sY = (pY < 1) ? -1 : 1; }
+        if (pX && !sX) {
+            sX = (pX < 1) ? -1 : 1;
+        }
+        if (pY && !sY) {
+            sY = (pY < 1) ? -1 : 1;
+        }
 
-        return { spinX  : sX,
-            spinY  : sY,
-            pixelX : pX,
-            pixelY : pY };
+        return {
+            spinX: sX,
+            spinY: sY,
+            pixelX: pX,
+            pixelY: pY
+        };
+    }
+
+    /**
+     * https://stackoverflow.com/questions/24004791/can-someone-explain-the-debounce-function-in-javascript
+     */
+    static debounce(func: () => void, wait: number, immediate: boolean = false) {
+        // 'private' variable for instance
+        // The returned function will be able to reference this due to closure.
+        // Each call to the returned function will share this common timer.
+        var timeout: any;
+
+        // Calling debounce returns a new anonymous function
+        return function () {
+            // reference the context and args for the setTimeout function
+            var context = this,
+                args = arguments;
+
+            // Should the function be called now? If immediate is true
+            //   and not already in a timeout then the answer is: Yes
+            var callNow = immediate && !timeout;
+
+            // This is the basic debounce behaviour where you can call this
+            //   function several times, but it will only execute once
+            //   [before or after imposing a delay].
+            //   Each time the returned function is called, the timer starts over.
+            clearTimeout(timeout);
+
+            // Set the new timeout
+            timeout = setTimeout(function () {
+
+                // Inside the timeout function, clear the timeout variable
+                // which will let the next execution run when in 'immediate' mode
+                timeout = null;
+
+                // Check if the function already ran with the immediate flag
+                if (!immediate) {
+                    // Call the original function with apply
+                    // apply lets you define the 'this' object as well as the arguments
+                    //    (both captured before setTimeout)
+                    func.apply(context, args);
+                }
+            }, wait);
+
+            // Immediate mode and no wait timer? Execute the function..
+            if (callNow) func.apply(context, args);
+        };
+    };
+
+    static referenceCompare (left:any, right:any):boolean{
+        if (left == null && right==null) return true;
+        if (left == null && right) return false;
+        if (left && right == null) return false;
+        return left === right;
     }
 }
 
@@ -1061,10 +1168,18 @@ export class NumberSequence {
         this.step = step;
     }
 
-    public next() : number {
-        var valToReturn = this.nextValue;
+    public next(): number {
+        let valToReturn = this.nextValue;
         this.nextValue += this.step;
         return valToReturn;
+    }
+
+    public peek(): number {
+        return this.nextValue;
+    }
+
+    public skip(count: number): void {
+        this.nextValue += count;
     }
 }
 

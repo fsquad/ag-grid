@@ -11,7 +11,6 @@ import {IRowModel} from "./interfaces/iRowModel";
 import {GridOptionsWrapper} from "./gridOptionsWrapper";
 import {PostConstruct} from "./context/context";
 import {Constants} from "./constants";
-import {IInMemoryRowModel} from "./interfaces/iInMemoryRowModel";
 import {InMemoryRowModel} from "./rowModels/inMemory/inMemoryRowModel";
 
 @Bean('selectionController')
@@ -56,7 +55,7 @@ export class SelectionController {
     }
 
     public getSelectedNodes() {
-        var selectedNodes: RowNode[] = [];
+        let selectedNodes: RowNode[] = [];
         _.iterateObject(this.selectedNodes, (key: string, rowNode: RowNode) => {
             if (rowNode) {
                 selectedNodes.push(rowNode);
@@ -66,7 +65,7 @@ export class SelectionController {
     }
 
     public getSelectedRows() {
-        var selectedRows: any[] = [];
+        let selectedRows: any[] = [];
         _.iterateObject(this.selectedNodes, (key: string, rowNode: RowNode) => {
             if (rowNode) {
                 selectedRows.push(rowNode.data);
@@ -88,7 +87,7 @@ export class SelectionController {
         if (this.rowModel.getType()!==Constants.ROW_MODEL_TYPE_NORMAL) {
             console.warn('updateGroupsFromChildrenSelections not available when rowModel is not normal');
         }
-        var inMemoryRowModel = <IInMemoryRowModel> this.rowModel;
+        let inMemoryRowModel = <InMemoryRowModel> this.rowModel;
         inMemoryRowModel.getTopLevelNodes().forEach( (rowNode: RowNode) => {
             rowNode.depthFirstSearch( (rowNode)=> {
                 if (rowNode.group) {
@@ -103,7 +102,7 @@ export class SelectionController {
     }
 
     public clearOtherNodes(rowNodeToKeepSelected: RowNode): number {
-        var groupsToRefresh: any = {};
+        let groupsToRefresh: any = {};
         let updatedCount = 0;
         _.iterateObject(this.selectedNodes, (key: string, otherRowNode: RowNode)=> {
             if (otherRowNode && otherRowNode.id !== rowNodeToKeepSelected.id) {
@@ -121,7 +120,7 @@ export class SelectionController {
     }
 
     private onRowSelected(event: any): void {
-        var rowNode = event.node;
+        let rowNode = event.node;
 
         // we do not store the group rows when the groups select children
         if (this.groupSelectsChildren && rowNode.group) { return; }
@@ -185,21 +184,21 @@ export class SelectionController {
             console.warn('getBestCostNodeSelection is only avilable when using normal row model');
         }
 
-        var inMemoryRowModel = <IInMemoryRowModel> this.rowModel;
+        let inMemoryRowModel = <InMemoryRowModel> this.rowModel;
 
-        var topLevelNodes = inMemoryRowModel.getTopLevelNodes();
+        let topLevelNodes = inMemoryRowModel.getTopLevelNodes();
 
         if (topLevelNodes===null) {
             console.warn('selectAll not available doing rowModel=virtual');
             return;
         }
 
-        var result: any = [];
+        let result: any = [];
 
         // recursive function, to find the selected nodes
         function traverse(nodes: any) {
-            for (var i = 0, l = nodes.length; i < l; i++) {
-                var node = nodes[i];
+            for (let i = 0, l = nodes.length; i < l; i++) {
+                let node = nodes[i];
                 if (node.isSelected()) {
                     result.push(node);
                 } else {
@@ -222,7 +221,7 @@ export class SelectionController {
     }
 
     public isEmpty(): boolean {
-        var count = 0;
+        let count = 0;
         _.iterateObject(this.selectedNodes, (nodeId: string, rowNode: RowNode) => {
             if (rowNode) {
                 count++;
@@ -282,7 +281,7 @@ export class SelectionController {
 
     // Deprecated method
     public deselectIndex(rowIndex: number) {
-        var node = this.rowModel.getRow(rowIndex);
+        let node = this.rowModel.getRow(rowIndex);
         this.deselectNode(node);
     }
 
@@ -293,7 +292,7 @@ export class SelectionController {
 
     // Deprecated method
     public selectIndex(index: any, tryMulti: boolean) {
-        var node = this.rowModel.getRow(index);
+        let node = this.rowModel.getRow(index);
         this.selectNode(node, tryMulti);
     }
 

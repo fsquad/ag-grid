@@ -15,17 +15,20 @@ export class AutoGroupColService {
     public createAutoGroupColumns(rowGroupColumns: Column[]): Column[] {
         let groupAutoColumns: Column[] = [];
 
+        // if doing groupMultiAutoColumn, then we call the method multiple times, once
+        // for each column we are grouping by
         if (this.gridOptionsWrapper.isGroupMultiAutoColumn()) {
             rowGroupColumns.forEach( (rowGroupCol: Column, index: number) => {
                 groupAutoColumns.push(this.createOneAutoGroupColumn(rowGroupCol, index));
             });
         } else {
-            groupAutoColumns.push(this.createOneAutoGroupColumn());
+            groupAutoColumns.push(this.createOneAutoGroupColumn(null));
         }
 
         return groupAutoColumns;
     }
 
+    // rowGroupCol and index are missing if groupMultiAutoColumn=false
     private createOneAutoGroupColumn(rowGroupCol?: Column, index?: number): Column {
         // if one provided by user, use it, otherwise create one
         let autoColDef = this.gridOptionsWrapper.getGroupColumnDef();
@@ -71,7 +74,15 @@ export class AutoGroupColService {
             } else {
                 autoColDef.cellRendererParams = _.cloneObject(autoColDef.cellRendererParams);
             }
+            // this is needed so we don't show the groups that are not relevant, otherwise
+            // the grid would have duplicate data. having multiple column groups only makes sense
+            // when this is true
             autoColDef.cellRendererParams.restrictToOneGroup = true;
+            // this is needed for logic in the group cellRenderer, so it knows what the original
+            // column was, so it can do the logic for restrictToOneGroup (it needs to know the grouping
+            // column for that)
+            autoColDef.cellRendererParams.originalRowGroupColumn = rowGroupCol;
+
 
             // if showing many cols, we don't want to show more than one with a checkbox for selection
             if (index>0) {
@@ -79,9 +90,9 @@ export class AutoGroupColService {
                 autoColDef.cellRendererParams.checkbox = false;
             }
 
-            colId = `${AutoGroupColService.GROUP_AUTO_COLUMN_ID}-${Math.random()}-${rowGroupCol.getId()}`;
+            colId = `${AutoGroupColService.GROUP_AUTO_COLUMN_ID}-${rowGroupCol.getId()}`;
         } else {
-            colId = `${AutoGroupColService.GROUP_AUTO_COLUMN_ID}-${Math.random()}`;
+            colId = `${AutoGroupColService.GROUP_AUTO_COLUMN_ID}_bundle`;
         }
 
         let newCol = new Column(autoColDef, colId, true);

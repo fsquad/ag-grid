@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -81,6 +81,9 @@ var FloatingFilterWrapperComp = (function (_super) {
         else {
             floatingFilterBody.appendChild(this.floatingFilterComp.getGui());
             body.appendChild(utils_1._.loadTemplate("<div class=\"ag-floating-filter-button\">\n                    <button ref=\"eButtonShowMainFilter\">...</button>            \n            </div>"));
+        }
+        if (this.floatingFilterComp.afterGuiAttached) {
+            this.floatingFilterComp.afterGuiAttached();
         }
     };
     FloatingFilterWrapperComp.prototype.onParentModelChanged = function (parentModel) {

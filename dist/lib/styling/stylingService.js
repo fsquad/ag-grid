@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -50,7 +50,7 @@ var StylingService = (function () {
     StylingService.prototype.processStaticCellClasses = function (colDef, params, onApplicableClass) {
         var cellClass = colDef.cellClass;
         if (cellClass) {
-            var classOrClasses;
+            var classOrClasses = void 0;
             if (typeof colDef.cellClass === 'function') {
                 var cellClassFunc = colDef.cellClass;
                 classOrClasses = cellClassFunc(params);

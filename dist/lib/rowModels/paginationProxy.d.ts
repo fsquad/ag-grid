@@ -1,8 +1,7 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { BeanStub } from "../context/beanStub";
-import { IPaginationService } from "./pagination/serverPaginationService";
 import { IRowModel } from "../interfaces/iRowModel";
 import { RowNode } from "../entities/rowNode";
 export declare class RowBounds {
@@ -20,7 +19,7 @@ export declare class PaginationAutoPageSizeService extends BeanStub {
     private onBodyHeightChanged();
     private checkPageSize();
 }
-export declare class PaginationProxy extends BeanStub implements IPaginationService, IRowModel {
+export declare class PaginationProxy extends BeanStub implements IRowModel {
     private rowModel;
     private gridPanel;
     private eventService;
@@ -44,9 +43,6 @@ export declare class PaginationProxy extends BeanStub implements IPaginationServ
     getCurrentPageHeight(): number;
     isRowPresent(rowNode: RowNode): boolean;
     private isRowInPage(rowNode);
-    insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void;
-    removeItems(rowNodes: RowNode[], skipRefresh: boolean): void;
-    addItems(items: any[], skipRefresh: boolean): void;
     isEmpty(): boolean;
     isRowsToRender(): boolean;
     forEachNode(callback: (rowNode: RowNode) => void): void;

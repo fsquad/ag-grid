@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -64,12 +64,13 @@ var BaseFilter = (function (_super) {
     }
     BaseFilter.prototype.init = function (params) {
         this.filterParams = params;
-        this.defaultFilter = BaseFilter.EQUALS;
+        this.defaultFilter = this.filterParams.defaultOption;
         if (this.filterParams.filterOptions) {
             if (this.filterParams.filterOptions.lastIndexOf(BaseFilter.EQUALS) < 0) {
                 this.defaultFilter = this.filterParams.filterOptions[0];
             }
         }
+        this.customInit();
         this.filter = this.defaultFilter;
         this.clearActive = params.clearButton === true;
         //Allowing for old param property apply, even though is not advertised through the interface
@@ -89,7 +90,6 @@ var BaseFilter = (function (_super) {
         this.instantiate(this.context);
         this.initialiseFilterBodyUi();
         this.refreshFilterBodyUi();
-        this.customInit();
     };
     BaseFilter.prototype.onClearButton = function () {
         this.setModel(null);
@@ -140,6 +140,7 @@ var BaseFilter = (function (_super) {
             this.filterParams.filterChangedCallback();
         }
         this.refreshFilterBodyUi();
+        return shouldFilter;
     };
     BaseFilter.prototype.onFilterChanged = function () {
         this.doOnFilterChanged();
@@ -148,7 +149,7 @@ var BaseFilter = (function (_super) {
         //It has to be of the type FloatingFilterWithApplyChange if it gets here
         var casted = change;
         this.setModel(casted ? casted.model : null);
-        this.doOnFilterChanged(casted ? casted.apply : false);
+        return this.doOnFilterChanged(casted ? casted.apply : false);
     };
     BaseFilter.prototype.generateFilterHeader = function () {
         return '';
@@ -208,6 +209,11 @@ var ComparableBaseFilter = (function (_super) {
         _super.prototype.init.call(this, params);
         this.addDestroyableEventListener(this.eTypeSelector, "change", this.onFilterTypeChanged.bind(this));
     };
+    ComparableBaseFilter.prototype.customInit = function () {
+        if (!this.defaultFilter) {
+            this.defaultFilter = this.getDefaultType();
+        }
+    };
     ComparableBaseFilter.prototype.generateFilterHeader = function () {
         var _this = this;
         var defaultFilterTypes = this.getApplicableFilterTypes();
@@ -221,6 +227,9 @@ var ComparableBaseFilter = (function (_super) {
         return optionsHtml.length <= 0 ?
             '' :
             "<div>\n                <select class=\"ag-filter-select\" id=\"filterType\" " + readOnly + ">\n                    " + optionsHtml.join('') + "\n                </select>\n            </div>";
+    };
+    ComparableBaseFilter.prototype.initialiseFilterBodyUi = function () {
+        this.setFilterType(this.filter);
     };
     ComparableBaseFilter.prototype.onFilterTypeChanged = function () {
         this.filter = this.eTypeSelector.value;
@@ -257,7 +266,9 @@ var ScalarBaseFilter = (function (_super) {
     function ScalarBaseFilter() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    ScalarBaseFilter.prototype.customInit = function () { };
+    ScalarBaseFilter.prototype.getDefaultType = function () {
+        return BaseFilter.EQUALS;
+    };
     ScalarBaseFilter.prototype.doesFilterPass = function (params) {
         var value = this.filterParams.valueGetter(params.node);
         var comparator = this.comparator();
@@ -273,10 +284,10 @@ var ScalarBaseFilter = (function (_super) {
             return compareResult > 0;
         }
         if (this.filter === BaseFilter.GREATER_THAN_OR_EQUAL) {
-            return compareResult >= 0;
+            return compareResult >= 0 && (value != null);
         }
         if (this.filter === BaseFilter.LESS_THAN_OR_EQUAL) {
-            return compareResult <= 0;
+            return compareResult <= 0 && (value != null);
         }
         if (this.filter === BaseFilter.LESS_THAN) {
             return compareResult < 0;

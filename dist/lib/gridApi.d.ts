@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { MasterSlaveService } from "./masterSlaveService";
@@ -14,6 +14,7 @@ import { CsvExportParams } from "./exportParams";
 import { ExcelExportParams } from "./interfaces/iExcelCreator";
 import { IDatasource } from "./rowModels/iDatasource";
 import { IEnterpriseDatasource } from "./interfaces/iEnterpriseDatasource";
+import { RowDataTransaction } from "./rowModels/inMemory/inMemoryRowModel";
 export interface StartEditingCellParams {
     rowIndex: number;
     colKey: string | Column | ColDef;
@@ -21,6 +22,7 @@ export interface StartEditingCellParams {
     charPress?: string;
 }
 export declare class GridApi {
+    private immutableService;
     private csvCreator;
     private excelCreator;
     private gridCore;
@@ -38,7 +40,6 @@ export declare class GridApi {
     private context;
     private rowModel;
     private sortController;
-    private serverPaginationService;
     private paginationProxy;
     private focusedCellController;
     private rangeController;
@@ -49,7 +50,7 @@ export declare class GridApi {
     private cellEditorFactory;
     private inMemoryRowModel;
     private infinitePageRowModel;
-    private paginationService;
+    private enterpriseRowModel;
     private init();
     /** Used internally by grid. Not intended to be used by the client. Interface may change between releases. */
     __getMasterSlaveService(): MasterSlaveService;
@@ -84,7 +85,8 @@ export declare class GridApi {
     isQuickFilterPresent(): boolean;
     getModel(): IRowModel;
     onGroupExpandedOrCollapsed(deprecated_refreshFromIndex?: any): void;
-    refreshInMemoryRowModel(): any;
+    refreshInMemoryRowModel(step?: string): any;
+    getRowNode(id: string): RowNode;
     expandAll(): void;
     collapseAll(): void;
     addVirtualRowListener(eventName: string, rowIndex: number, callback: Function): void;
@@ -137,10 +139,15 @@ export declare class GridApi {
     clearFocusedCell(): void;
     setFocusedCell(rowIndex: number, colKey: Column | ColDef | string, floating?: string): void;
     setHeaderHeight(headerHeight: number): void;
+    setGroupHeaderHeight(headerHeight: number): void;
+    setFloatingFiltersHeight(headerHeight: number): void;
+    setPivotGroupHeaderHeight(headerHeight: number): void;
+    setPivotHeaderHeight(headerHeight: number): void;
     showToolPanel(show: any): void;
     isToolPanelShowing(): boolean;
     doLayout(): void;
     resetRowHeights(): void;
+    setGroupRemoveSingleChildren(value: boolean): void;
     onRowHeightChanged(): void;
     getValue(colKey: string | ColDef | Column, rowNode: RowNode): any;
     addEventListener(eventType: string, listener: Function): void;
@@ -167,13 +174,17 @@ export declare class GridApi {
         [key: string]: IAggFunc;
     }): void;
     clearAggFuncs(): void;
+    updateRowData(rowDataTransaction: RowDataTransaction): void;
     insertItemsAtIndex(index: number, items: any[], skipRefresh?: boolean): void;
     removeItems(rowNodes: RowNode[], skipRefresh?: boolean): void;
     addItems(items: any[], skipRefresh?: boolean): void;
     refreshVirtualPageCache(): void;
     refreshInfinitePageCache(): void;
+    refreshInfiniteCache(): void;
     purgeVirtualPageCache(): void;
     purgeInfinitePageCache(): void;
+    purgeInfiniteCache(): void;
+    purgeEnterpriseCache(route?: string[]): void;
     getVirtualRowCount(): number;
     getInfiniteRowCount(): number;
     isMaxRowFound(): boolean;
@@ -181,7 +192,10 @@ export declare class GridApi {
     setInfiniteRowCount(rowCount: number, maxRowFound?: boolean): void;
     getVirtualPageState(): any;
     getInfinitePageState(): any;
+    getCacheBlockState(): any;
     checkGridSize(): void;
+    getDisplayedRowAtIndex(index: number): RowNode;
+    getDisplayedRowCount(): number;
     paginationIsLastPageFound(): boolean;
     paginationGetPageSize(): number;
     paginationSetPageSize(size: number): void;

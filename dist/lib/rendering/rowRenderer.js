@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -36,9 +36,10 @@ var templateService_1 = require("../templateService");
 var valueService_1 = require("../valueService");
 var eventService_1 = require("../eventService");
 var floatingRowModel_1 = require("../rowModels/floatingRowModel");
-var renderedRow_1 = require("./renderedRow");
+var rowComp_1 = require("./rowComp");
 var events_1 = require("../events");
 var constants_1 = require("../constants");
+var cellComp_1 = require("./cellComp");
 var context_1 = require("../context/context");
 var gridCore_1 = require("../gridCore");
 var columnController_1 = require("../columnController/columnController");
@@ -107,7 +108,7 @@ var RowRenderer = (function (_super) {
         }
         if (rowNodes) {
             rowNodes.forEach(function (node) {
-                var renderedRow = new renderedRow_1.RenderedRow(_this.$scope, _this, bodyContainerComp, fullWidthContainerComp, pinnedLeftContainerComp, pinnedRightContainerComp, node, false);
+                var renderedRow = new rowComp_1.RowComp(_this.$scope, _this, bodyContainerComp, fullWidthContainerComp, pinnedLeftContainerComp, pinnedRightContainerComp, node, false);
                 _this.context.wireBean(renderedRow);
                 renderedRows.push(renderedRow);
             });
@@ -154,11 +155,30 @@ var RowRenderer = (function (_super) {
             keepRenderedRows: true
         });
     };
+    RowRenderer.prototype.getCellToRestoreFocusToAfterRefresh = function (params) {
+        var focusedCell = params.suppressKeepFocus ? null : this.focusedCellController.getFocusCellToUseAfterRefresh();
+        if (utils_1.Utils.missing(focusedCell)) {
+            return null;
+        }
+        // if the dom is not actually focused on a cell, then we don't try to refocus. the problem this
+        // solves is with editing - if the user is editing, eg focus is on a text field, and not on the
+        // cell itself, then the cell can be registered as having focus, however it's the text field that
+        // has the focus and not the cell div. therefore, when the refresh is finished, the grid will focus
+        // the cell, and not the textfield. that means if the user is in a text field, and the grid refreshes,
+        // the focus is lost from the text field. we do not want this.
+        var activeElement = document.activeElement;
+        var domData = this.gridOptionsWrapper.getDomData(activeElement, cellComp_1.CellComp.DOM_DATA_KEY_CELL_COMP);
+        var elementIsNotACellDev = utils_1.Utils.missing(domData);
+        if (elementIsNotACellDev) {
+            return null;
+        }
+        return focusedCell;
+    };
     RowRenderer.prototype.refreshView = function (params) {
         if (params === void 0) { params = {}; }
         this.logger.log('refreshView');
         this.getLockOnRefresh();
-        var focusedCell = params.suppressKeepFocus ? null : this.focusedCellController.getFocusCellToUseAfterRefresh();
+        var focusedCell = this.getCellToRestoreFocusToAfterRefresh(params);
         if (!this.gridOptionsWrapper.isForPrint()) {
             var containerHeight = this.paginationProxy.getCurrentPageHeight();
             // we need at least 1 pixel for the horizontal scroll to work. so if there are now rows,
@@ -262,8 +282,9 @@ var RowRenderer = (function (_super) {
         // never keep rendered rows if doing forPrint, as we do not use 'top' to
         // position the rows in forPrint (use normal flow), so we have to remove
         // all rows and insert them again from scratch
-        if (this.gridOptionsWrapper.isForPrint()) {
+        if (this.gridOptionsWrapper.isForPrint() || this.gridOptionsWrapper.isAutoHeight()) {
             keepRenderedRows = false;
+            animate = false;
         }
         if (keepRenderedRows) {
             rowsToRemove = [];
@@ -304,7 +325,7 @@ var RowRenderer = (function (_super) {
     RowRenderer.prototype.removeVirtualRows = function (rowsToRemove) {
         var _this = this;
         // if no fromIndex then set to -1, which will refresh everything
-        // var realFromIndex = -1;
+        // let realFromIndex = -1;
         rowsToRemove.forEach(function (indexToRemove) {
             var renderedRow = _this.renderedRows[indexToRemove];
             renderedRow.destroy();
@@ -366,8 +387,8 @@ var RowRenderer = (function (_super) {
         if (firstDiffers || lastDiffers) {
             this.firstRenderedRow = newFirst;
             this.lastRenderedRow = newLast;
-            var event = { firstRow: newFirst, lastRow: newLast };
-            this.eventService.dispatchEvent(events_1.Events.EVENT_VIEWPORT_CHANGED, event);
+            var event_1 = { firstRow: newFirst, lastRow: newLast };
+            this.eventService.dispatchEvent(events_1.Events.EVENT_VIEWPORT_CHANGED, event_1);
         }
     };
     RowRenderer.prototype.getFirstVirtualRenderedRow = function () {
@@ -377,7 +398,7 @@ var RowRenderer = (function (_super) {
         return this.lastRenderedRow;
     };
     RowRenderer.prototype.ensureRowsRendered = function (oldRenderedRowsByNodeId, animate) {
-        // var timer = new Timer();
+        // let timer = new Timer();
         var _this = this;
         if (animate === void 0) { animate = false; }
         // at the end, this array will contain the items we need to remove
@@ -459,7 +480,7 @@ var RowRenderer = (function (_super) {
             delete oldRowsByNodeId[rowNode.id];
         }
         else {
-            renderedRow = new renderedRow_1.RenderedRow(this.$scope, this, this.rowContainers.body, this.rowContainers.fullWidth, this.rowContainers.pinnedLeft, this.rowContainers.pinnedRight, rowNode, animate);
+            renderedRow = new rowComp_1.RowComp(this.$scope, this, this.rowContainers.body, this.rowContainers.fullWidth, this.rowContainers.pinnedLeft, this.rowContainers.pinnedRight, rowNode, animate);
             this.context.wireBean(renderedRow);
         }
         return renderedRow;
@@ -714,10 +735,6 @@ __decorate([
     context_1.Autowired('gridPanel'),
     __metadata("design:type", gridPanel_1.GridPanel)
 ], RowRenderer.prototype, "gridPanel", void 0);
-__decorate([
-    context_1.Autowired('$compile'),
-    __metadata("design:type", Object)
-], RowRenderer.prototype, "$compile", void 0);
 __decorate([
     context_1.Autowired('$scope'),
     __metadata("design:type", Object)

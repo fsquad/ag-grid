@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -139,15 +139,15 @@ var HeaderWrapperComp = (function (_super) {
             return;
         }
         if (eHeaderCellLabel) {
-            var dragSource = {
+            var dragSource_1 = {
                 type: dragAndDropService_1.DragSourceType.HeaderCell,
                 eElement: eHeaderCellLabel,
                 dragItem: [this.column],
                 dragItemName: displayName,
                 dragSourceDropTarget: this.dragSourceDropTarget
             };
-            this.dragAndDropService.addDragSource(dragSource, true);
-            this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource); });
+            this.dragAndDropService.addDragSource(dragSource_1, true);
+            this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource_1); });
         }
     };
     HeaderWrapperComp.prototype.setupResize = function () {

@@ -3,6 +3,7 @@ import {GridApi} from "../gridApi";
 import {Events} from "../events";
 import {Utils as _} from "../utils";
 import {ColumnApi} from "../columnController/columnController";
+import {GridOptionsWrapper} from "../gridOptionsWrapper";
 
 export class ComponentUtil {
 
@@ -15,7 +16,7 @@ export class ComponentUtil {
     public static STRING_PROPERTIES = [
         'sortingOrder', 'rowClass', 'rowSelection', 'overlayLoadingTemplate',
         'overlayNoRowsTemplate', 'headerCellTemplate', 'quickFilterText', 'rowModelType',
-        'editType'];
+        'editType', 'domLayout'];
 
     public static OBJECT_PROPERTIES = [
         'rowStyle','context','groupColumnDef','localeText','icons','datasource','enterpriseDatasource','viewportDatasource',
@@ -28,10 +29,11 @@ export class ComponentUtil {
     ];
 
     public static NUMBER_PROPERTIES = [
-        'rowHeight','rowBuffer','colWidth','headerHeight','groupDefaultExpanded',
+        'rowHeight','rowBuffer','colWidth','headerHeight','groupHeaderHeight', 'floatingFiltersHeight',
+        'pivotHeaderHeight', 'pivotGroupHeaderHeight', 'groupDefaultExpanded',
         'minColWidth','maxColWidth','viewportRowModelPageSize','viewportRowModelBufferSize',
-        'layoutInterval','autoSizePadding','maxPagesInCache','maxConcurrentDatasourceRequests',
-        'paginationOverflowSize','paginationPageSize','infiniteBlockSize','infiniteInitialRowCount',
+        'layoutInterval','autoSizePadding','maxBlocksInCache','maxConcurrentDatasourceRequests',
+        'cacheOverflowSize','paginationPageSize','infiniteBlockSize','infiniteInitialRowCount',
         'scrollbarWidth','paginationStartPage','infiniteBlockSize'
     ];
 
@@ -46,16 +48,17 @@ export class ComponentUtil {
         'singleClickEdit','suppressLoadingOverlay','suppressNoRowsOverlay','suppressAutoSize',
         'suppressParentsInRowNodes','showToolPanel','suppressColumnMoveAnimation','suppressMovableColumns',
         'suppressFieldDotNotation','enableRangeSelection','suppressEnterprise','rowGroupPanelShow',
-        'pivotPanelShow', 'suppressTouch', 'allowContextMenuWithControlKey',
+        'pivotPanelShow', 'suppressTouch', 'suppressAsyncEvents', 'allowContextMenuWithControlKey',
         'suppressContextMenu','suppressMenuFilterPanel','suppressMenuMainPanel','suppressMenuColumnPanel',
         'enableStatusBar','rememberGroupStateWhenNewData', 'enableCellChangeFlash', 'suppressDragLeaveHidesColumns',
         'suppressMiddleClickScrolls','suppressPreventDefaultOnMouseWheel', 'suppressUseColIdForGroups',
-        'suppressCopyRowsToClipboard','pivotMode', 'suppressAggFuncInHeader', 'suppressColumnVirtualisation',
+        'suppressCopyRowsToClipboard','pivotMode', 'suppressAggFuncInHeader', 'suppressAggFuncInHeader', 'suppressAggAtRootLevel',
         'suppressFocusAfterRefresh', 'functionsPassive', 'functionsReadOnly', 'suppressRowHoverClass',
         'animateRows', 'groupSelectsFiltered', 'groupRemoveSingleChildren', 'enableRtl', 'suppressClickEdit',
         'enableGroupEdit', 'embedFullWidthRows', 'suppressTabbing', 'suppressPaginationPanel', 'floatingFilter',
         'groupHideOpenParents', 'groupMultiAutoColumn', 'pagination', 'stopEditingWhenGridLosesFocus',
-        'paginationAutoPageSize', 'suppressScrollOnNewData'
+        'paginationAutoPageSize', 'suppressScrollOnNewData', 'purgeClosedRowNodes', 'cacheQuickFilter',
+        'deltaRowDataMode'
     ];
 
     public static FUNCTION_PROPERTIES = ['headerCellRenderer', 'localeTextFunc', 'groupRowInnerRenderer', 'groupRowInnerRendererFramework',
@@ -65,7 +68,7 @@ export class ComponentUtil {
         'getNodeChildDetails', 'groupRowAggNodes', 'getRowNodeId', 'isFullWidthCell', 'fullWidthCellRenderer',
         'fullWidthCellRendererFramework', 'doesDataFlower', 'processSecondaryColDef','processSecondaryColGroupDef',
         'getBusinessKeyForNode', 'sendToClipboard', 'navigateToNextCell', 'tabToNextCell',
-        'processCellFromClipboard', 'getDocument'];
+        'processCellFromClipboard', 'getDocument', 'postProcessPopup'];
 
     public static ALL_PROPERTIES = ComponentUtil.ARRAY_PROPERTIES
         .concat(ComponentUtil.OBJECT_PROPERTIES)
@@ -91,7 +94,7 @@ export class ComponentUtil {
             gridOptions = <GridOptions> {};
         }
         // to allow array style lookup in TypeScript, take type away from 'this' and 'gridOptions'
-        var pGridOptions = <any>gridOptions;
+        let pGridOptions = <any>gridOptions;
         // add in all the simple properties
         ComponentUtil.ARRAY_PROPERTIES
             .concat(ComponentUtil.STRING_PROPERTIES)
@@ -138,7 +141,7 @@ export class ComponentUtil {
         checkForDeprecated(changes);
 
         // to allow array style lookup in TypeScript, take type away from 'this' and 'gridOptions'
-        var pGridOptions = <any> gridOptions;
+        let pGridOptions = <any> gridOptions;
 
         // check if any change for the simple types, and if so, then just copy in the new value
         ComponentUtil.ARRAY_PROPERTIES
@@ -203,6 +206,10 @@ export class ComponentUtil {
 
         if (changes.pivotMode) {
             columnApi.setPivotMode(ComponentUtil.toBoolean(changes.pivotMode.currentValue));
+        }
+
+        if (changes.groupRemoveSingleChildren) {
+            api.setGroupRemoveSingleChildren(ComponentUtil.toBoolean(changes.groupRemoveSingleChildren.currentValue));
         }
 
         api.dispatchEvent(Events.EVENT_COMPONENT_STATE_CHANGED, changes);

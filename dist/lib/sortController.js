@@ -1,6 +1,6 @@
 /**
  * ag-grid - Advanced Data Grid / Data Table supporting Javascript / React / AngularJS / Web Components
- * @version v9.1.0
+ * @version v10.1.0
  * @link http://www.ag-grid.com/
  * @license MIT
  */
@@ -58,9 +58,7 @@ var SortController = SortController_1 = (function () {
         this.dispatchSortChangedEvents();
     };
     SortController.prototype.dispatchSortChangedEvents = function () {
-        this.eventService.dispatchEvent(events_1.Events.EVENT_BEFORE_SORT_CHANGED);
         this.eventService.dispatchEvent(events_1.Events.EVENT_SORT_CHANGED);
-        this.eventService.dispatchEvent(events_1.Events.EVENT_AFTER_SORT_CHANGED);
     };
     SortController.prototype.clearSortBarThisColumn = function (columnToSkip) {
         this.columnController.getPrimaryAndSecondaryAndAutoColumns().forEach(function (columnToClear) {
@@ -113,6 +111,7 @@ var SortController = SortController_1 = (function () {
         });
     };
     SortController.prototype.setSortModel = function (sortModel) {
+        var _this = this;
         if (!this.gridOptionsWrapper.isEnableSorting()) {
             console.warn('ag-grid: You are setting the sort model on a grid that does not have sorting enabled');
             return;
@@ -128,7 +127,7 @@ var SortController = SortController_1 = (function () {
                     var sortModelEntry = sortModel[j];
                     if (typeof sortModelEntry.colId === 'string'
                         && typeof column.getColId() === 'string'
-                        && sortModelEntry.colId === column.getColId()) {
+                        && _this.compareColIds(sortModelEntry, column)) {
                         sortForCol = sortModelEntry.sort;
                         sortedAt = j;
                     }
@@ -144,6 +143,9 @@ var SortController = SortController_1 = (function () {
             }
         });
         this.dispatchSortChangedEvents();
+    };
+    SortController.prototype.compareColIds = function (sortModelEntry, column) {
+        return sortModelEntry.colId === column.getColId();
     };
     SortController.prototype.getColumnsWithSortingOrdered = function () {
         // pull out all the columns that have sorting set

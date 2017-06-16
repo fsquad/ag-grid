@@ -1,4 +1,4 @@
-// Type definitions for ag-grid v9.1.0
+// Type definitions for ag-grid v10.1.0
 // Project: http://www.ag-grid.com/
 // Definitions by: Niall Crosby <https://github.com/ceolter/>
 import { Column } from "./entities/column";
@@ -18,6 +18,7 @@ export declare class SortController {
         sort: string;
     }[];
     setSortModel(sortModel: any): void;
+    private compareColIds(sortModelEntry, column);
     getColumnsWithSortingOrdered(): Column[];
     getSortForRowController(): any[];
 }
